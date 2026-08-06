@@ -1,0 +1,46 @@
+<svg width="260" height="340" viewBox="0 0 260 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Logo LaafiPay">
+  <title>LaafiPay</title>
+  <rect width="260" height="340" fill="#FFFFFF"/>
+
+  <svg x="50" y="30" width="160" height="160" viewBox="0 0 200 200">
+    <defs>
+      <linearGradient id="barGradient" x1="0" y1="1" x2="1" y2="0">
+        <stop offset="0%" stop-color="#0F5F88"/>
+        <stop offset="100%" stop-color="#38B66C"/>
+      </linearGradient>
+    </defs>
+
+    <!-- Courbe de croissance -->
+    <path d="M44 168 C 88 188, 128 188, 156 168 C 170 158, 176 144, 176 124"
+          stroke="#63C132" stroke-width="8" stroke-linecap="round" fill="none"/>
+
+    <!-- L : fût + pied (bleu marine) -->
+    <rect x="34" y="40" width="28" height="120" rx="6" fill="#083B66"/>
+    <rect x="34" y="132" width="68" height="28" rx="6" fill="#083B66"/>
+
+    <!-- P : fût fusionné au pied du L (vert) -->
+    <rect x="96" y="40" width="28" height="120" rx="6" fill="#63C132"/>
+    <path d="M96 40 L150 40 C158 40 160 48 160 58 L160 94 C160 104 158 112 150 112 L96 112 Z
+             M124 58 L142 58 C146 58 148 60 148 64 L148 88 C148 92 146 94 142 94 L124 94 Z"
+          fill="#63C132" fill-rule="evenodd"/>
+
+    <!-- 3 barres de croissance, dégradé bleu -> vert -->
+    <rect x="128" y="82" width="5" height="12" fill="url(#barGradient)"/>
+    <rect x="135" y="74" width="5" height="20" fill="url(#barGradient)"/>
+    <rect x="142" y="64" width="5" height="30" fill="url(#barGradient)"/>
+  </svg>
+
+  <svg x="20" y="207" width="221" height="54" viewBox="0 0 320 60">
+    <text x="0" y="44" font-family="Poppins, Manrope, 'Avenir Next', sans-serif" font-weight="500" font-size="42" letter-spacing="0.4">
+      <tspan fill="#083B66">laafi</tspan><tspan fill="#63C132">pay</tspan>
+    </text>
+  </svg>
+
+  <svg x="0" y="278" width="260" height="27" viewBox="0 0 400 24">
+    <line x1="0" y1="12" x2="20" y2="12" stroke="#63C132" stroke-width="1.5"/>
+    <text x="200" y="16" text-anchor="middle" font-family="Poppins, Manrope, 'Avenir Next', sans-serif" font-weight="400" font-size="12" letter-spacing="0.2">
+      <tspan fill="#083B66">la </tspan><tspan fill="#63C132">solution saas</tspan><tspan fill="#083B66"> pour votre entreprise</tspan>
+    </text>
+    <line x1="380" y1="12" x2="400" y2="12" stroke="#63C132" stroke-width="1.5"/>
+  </svg>
+</svg>

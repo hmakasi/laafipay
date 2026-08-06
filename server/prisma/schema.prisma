@@ -1,0 +1,233 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  // DATABASE_URL : connexion via le pooler (pgbouncer, port 6543) — utilisée à l'exécution.
+  url       = env("DATABASE_URL")
+  // DIRECT_URL : connexion directe (port 5432, sans pooler) — requise par Prisma Migrate,
+  // pgbouncer en mode transaction ne supportant pas les commandes DDL/session nécessaires aux migrations.
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserRole {
+  admin
+  hr_manager
+  manager
+  accountant
+  employee
+}
+
+enum Gender {
+  M
+  F
+}
+
+enum MaritalStatus {
+  celibataire
+  marie
+  divorce
+  veuf
+}
+
+enum ContractType {
+  CDI
+  CDD
+  Stage
+  Journalier
+  Consultant
+}
+
+enum EmployeeStatus {
+  actif
+  periode_essai
+  en_conge
+  suspendu
+  offboarded
+}
+
+enum PaymentMethod {
+  mobile_money
+  virement
+  mixte
+  especes
+}
+
+enum MobileMoneyOperator {
+  orange
+  moov
+  telecel
+}
+
+enum DocumentType {
+  contrat
+  avenant
+  piece_identite
+  diplome
+  attestation
+  autre
+}
+
+enum CareerEventType {
+  embauche
+  promotion
+  mutation
+  augmentation
+  avertissement
+  fin_essai
+}
+
+enum EmployeeInviteStatus {
+  not_invited
+  invited
+  completed
+}
+
+model Company {
+  id         String   @id @default(cuid())
+  name       String
+  legalName  String?
+  ifu        String?
+  rccm       String?
+  address    String?
+  city       String?
+  country    String?
+  phone      String?
+  email      String?
+  cnssNumber String?
+  logo       String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  users       User[]
+  employees   Employee[]
+  departments Department[]
+}
+
+model User {
+  id           String    @id @default(cuid())
+  companyId    String
+  company      Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  firstName    String
+  lastName     String
+  email        String    @unique
+  passwordHash String
+  role         UserRole
+  employeeId   String?   @unique
+  employee     Employee? @relation(fields: [employeeId], references: [id])
+  avatar       String?
+  lastLogin    DateTime?
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Department {
+  id        String      @id @default(cuid())
+  companyId String
+  company   Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name      String
+  code      String
+  managerId String?
+  manager   Employee?   @relation("DepartmentManager", fields: [managerId], references: [id], onDelete: SetNull)
+  parentId  String?
+  parent    Department? @relation("DepartmentHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children  Department[] @relation("DepartmentHierarchy")
+  employees Employee[]  @relation("EmployeeDepartment")
+
+  @@unique([companyId, code])
+}
+
+model Employee {
+  id               String         @id @default(cuid())
+  companyId        String
+  company          Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  matricule        String
+  firstName        String
+  lastName         String
+  gender           Gender
+  dateOfBirth      DateTime
+  placeOfBirth     String
+  nationality      String
+  maritalStatus    MaritalStatus
+  numberOfChildren Int            @default(0)
+  email            String
+  phone            String
+  address          String
+  city             String
+
+  contractType     ContractType
+  status           EmployeeStatus @default(periode_essai)
+  hireDate         DateTime
+  trialEndDate     DateTime?
+  contractEndDate  DateTime?
+
+  position         String
+  departmentId     String
+  department       Department     @relation("EmployeeDepartment", fields: [departmentId], references: [id])
+  managerId        String?
+  manager          Employee?      @relation("EmployeeManager", fields: [managerId], references: [id], onDelete: SetNull)
+  reports          Employee[]     @relation("EmployeeManager")
+  siteLocation     String
+
+  baseSalary          Float
+  paymentMethod        PaymentMethod
+  mobileMoneyOperator  MobileMoneyOperator?
+  mobileMoneyNumber    String?
+  mobileMoneyAccount   String?
+  bankName             String?
+  bankIban             String?
+  bankRib              String?
+  bankAccountHolder    String?
+
+  cnssNumber   String?
+  iutsCategory Int     @default(1)
+  avatar       String?
+
+  // "invite" (not "onboarding") to avoid colliding with the onboarding checklist below (contractSigned, cnssRegistered, ...)
+  inviteToken  String?              @unique
+  inviteStatus EmployeeInviteStatus @default(not_invited)
+
+  contractSigned      Boolean @default(false)
+  cnssRegistered      Boolean @default(false)
+  equipmentProvided   Boolean @default(false)
+  accessGranted       Boolean @default(false)
+  trainingCompleted   Boolean @default(false)
+  bankInfoProvided    Boolean @default(false)
+  photoTaken          Boolean @default(false)
+
+  documents      EmployeeDocument[]
+  careerHistory  CareerEvent[]
+  managedDepartments Department[] @relation("DepartmentManager")
+  user           User?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, matricule])
+  @@unique([companyId, email])
+}
+
+model EmployeeDocument {
+  id         String       @id @default(cuid())
+  employeeId String
+  employee   Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  type       DocumentType
+  name       String
+  uploadedAt DateTime     @default(now())
+  url        String
+  size       Int
+}
+
+model CareerEvent {
+  id            String          @id @default(cuid())
+  employeeId    String
+  employee      Employee        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  date          DateTime
+  type          CareerEventType
+  description   String
+  previousValue String?
+  newValue      String?
+  changedBy     String
+}

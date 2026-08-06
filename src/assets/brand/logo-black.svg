@@ -1,0 +1,35 @@
+<svg width="260" height="340" viewBox="0 0 260 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Logo LaafiPay (noir)">
+  <title>LaafiPay (version noire)</title>
+  <rect width="260" height="340" fill="#FFFFFF"/>
+
+  <svg x="50" y="30" width="160" height="160" viewBox="0 0 200 200">
+    <path d="M44 168 C 88 188, 128 188, 156 168 C 170 158, 176 144, 176 124"
+          stroke="#000000" stroke-width="8" stroke-linecap="round" fill="none"/>
+
+    <rect x="34" y="40" width="28" height="120" rx="6" fill="#000000"/>
+    <rect x="34" y="132" width="68" height="28" rx="6" fill="#000000"/>
+
+    <rect x="96" y="40" width="28" height="120" rx="6" fill="#000000"/>
+    <path d="M96 40 L150 40 C158 40 160 48 160 58 L160 94 C160 104 158 112 150 112 L96 112 Z
+             M124 58 L142 58 C146 58 148 60 148 64 L148 88 C148 92 146 94 142 94 L124 94 Z"
+          fill="#000000" fill-rule="evenodd"/>
+
+    <rect x="128" y="82" width="5" height="12" fill="#000000"/>
+    <rect x="135" y="74" width="5" height="20" fill="#000000"/>
+    <rect x="142" y="64" width="5" height="30" fill="#000000"/>
+  </svg>
+
+  <svg x="20" y="207" width="221" height="54" viewBox="0 0 320 60">
+    <text x="0" y="44" font-family="Poppins, Manrope, 'Avenir Next', sans-serif" font-weight="500" font-size="42" letter-spacing="0.4" fill="#000000">
+      laafipay
+    </text>
+  </svg>
+
+  <svg x="0" y="278" width="260" height="27" viewBox="0 0 400 24">
+    <line x1="0" y1="12" x2="20" y2="12" stroke="#000000" stroke-width="1.5"/>
+    <text x="200" y="16" text-anchor="middle" font-family="Poppins, Manrope, 'Avenir Next', sans-serif" font-weight="400" font-size="12" letter-spacing="0.2" fill="#000000">
+      la solution saas pour votre entreprise
+    </text>
+    <line x1="380" y1="12" x2="400" y2="12" stroke="#000000" stroke-width="1.5"/>
+  </svg>
+</svg>
