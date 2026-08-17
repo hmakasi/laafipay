@@ -84,21 +84,37 @@ enum EmployeeInviteStatus {
   completed
 }
 
+// Pays supportés par le moteur de paie multi-pays (voir server/src/payroll
+// une fois le moteur backend branché). Les valeurs matchent exactement les
+// littéraux CountryCode/CurrencyCode envoyés par le frontend (src/types).
+enum CountryCode {
+  BF
+  BJ
+  CD
+}
+
+enum CurrencyCode {
+  XOF
+  CDF
+  USD
+}
+
 model Company {
-  id         String   @id @default(cuid())
-  name       String
-  legalName  String?
-  ifu        String?
-  rccm       String?
-  address    String?
-  city       String?
-  country    String?
-  phone      String?
-  email      String?
-  cnssNumber String?
-  logo       String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id           String       @id @default(cuid())
+  name         String
+  legalName    String?
+  ifu          String?
+  rccm         String?
+  address      String?
+  city         String?
+  countryCode  CountryCode
+  currencyCode CurrencyCode
+  phone        String?
+  email        String?
+  cnssNumber   String?
+  logo         String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 
   users       User[]
   employees   Employee[]

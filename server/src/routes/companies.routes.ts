@@ -9,26 +9,35 @@ import { HttpError, NotFoundError } from '../lib/errors.js';
 
 export const companiesRouter = Router();
 
-const signupSchema = z.object({
-  company: z.object({
-    name: z.string().min(1),
-    legalName: z.string().optional(),
-    ifu: z.string().optional(),
-    rccm: z.string().optional(),
-    address: z.string().optional(),
-    city: z.string().optional(),
-    country: z.string().optional(),
-    phone: z.string().optional(),
-    email: z.string().email().optional(),
-    cnssNumber: z.string().optional(),
-  }),
-  admin: z.object({
-    firstName: z.string().min(1),
-    lastName: z.string().min(1),
-    email: z.string().email(),
-    password: z.string().min(8),
-  }),
-});
+const COUNTRY_CODES = ['BF', 'BJ', 'CD'] as const;
+const CURRENCY_CODES = ['XOF', 'CDF', 'USD'] as const;
+
+// Devises acceptées par pays — garde-fou contre une paire countryCode/
+// currencyCode incohérente (ex. BF + USD), au-delà de ce qu'un simple enum
+// Zod peut vérifier indépendamment sur chaque champ.
+const CURRENCIES_BY_COUNTRY: Record<(typeof COUNTRY_CODES)[number], readonly string[]> = {
+  BF: ['XOF'],
+  BJ: ['XOF'],
+  CD: ['CDF', 'USD'],
+};
+
+// Payload à plat envoyée par SignupPage.tsx (src/pages/SignupPage.tsx).
+const signupSchema = z
+  .object({
+    companyName: z.string().min(1),
+    countryCode: z.enum(COUNTRY_CODES),
+    currencyCode: z.enum(CURRENCY_CODES),
+    admin: z.object({
+      firstName: z.string().min(1),
+      lastName: z.string().min(1),
+      email: z.string().email(),
+      password: z.string().min(8),
+    }),
+  })
+  .refine((data) => CURRENCIES_BY_COUNTRY[data.countryCode].includes(data.currencyCode), {
+    message: 'Devise incompatible avec le pays sélectionné',
+    path: ['currencyCode'],
+  });
 
 function toCompanyDTO(c: {
   id: string;
@@ -38,7 +47,8 @@ function toCompanyDTO(c: {
   rccm: string | null;
   address: string | null;
   city: string | null;
-  country: string | null;
+  countryCode: string;
+  currencyCode: string;
   phone: string | null;
   email: string | null;
   cnssNumber: string | null;
@@ -52,7 +62,8 @@ function toCompanyDTO(c: {
     rccm: c.rccm ?? undefined,
     address: c.address ?? undefined,
     city: c.city ?? undefined,
-    country: c.country ?? undefined,
+    countryCode: c.countryCode,
+    currencyCode: c.currencyCode,
     phone: c.phone ?? undefined,
     email: c.email ?? undefined,
     cnssNumber: c.cnssNumber ?? undefined,
@@ -63,7 +74,7 @@ function toCompanyDTO(c: {
 companiesRouter.post(
   '/signup',
   asyncHandler(async (req, res) => {
-    const { company, admin } = signupSchema.parse(req.body);
+    const { companyName, countryCode, currencyCode, admin } = signupSchema.parse(req.body);
 
     const existing = await prisma.user.findUnique({ where: { email: admin.email } });
     if (existing) {
@@ -73,7 +84,9 @@ companiesRouter.post(
     const passwordHash = await bcrypt.hash(admin.password, 10);
 
     const user = await prisma.$transaction(async (tx) => {
-      const createdCompany = await tx.company.create({ data: company });
+      const createdCompany = await tx.company.create({
+        data: { name: companyName, countryCode, currencyCode },
+      });
       return tx.user.create({
         data: {
           companyId: createdCompany.id,
@@ -101,7 +114,11 @@ companiesRouter.post(
 companiesRouter.get(
   '/me',
   authenticate,
-  authorize('settings:read'),
+  // Pas de authorize('settings:read') ici : le nom/pays/devise de l'entreprise
+  // n'est pas une donnée de réglage privilégiée, c'est un contexte d'affichage
+  // dont TOUS les rôles ont besoin (ex. formater les montants du tableau de
+  // bord dans la bonne devise). Seule la modification (PATCH ci-dessous) doit
+  // rester réservée à settings:write.
   asyncHandler(async (req, res) => {
     const company = await prisma.company.findUnique({ where: { id: req.user!.companyId } });
     if (!company) throw new NotFoundError('Entreprise introuvable');
@@ -116,7 +133,9 @@ const updateCompanySchema = z.object({
   rccm: z.string().optional(),
   address: z.string().optional(),
   city: z.string().optional(),
-  country: z.string().optional(),
+  // countryCode/currencyCode volontairement absents ici : les changer après
+  // coup rouvrirait la question des paies déjà calculées dans l'ancienne
+  // devise/juridiction — hors périmètre de cette mise à jour de profil.
   phone: z.string().optional(),
   email: z.string().email().optional(),
   cnssNumber: z.string().optional(),

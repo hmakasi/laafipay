@@ -9,11 +9,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { useAuthStore } from '@/store/authStore';
+import { COUNTRY_CODES, COUNTRY_META } from '@/lib/constants';
+import { CountryCode } from '@/types';
 
 const signupSchema = z.object({
   companyName: z.string().min(1, 'Champ requis'),
+  countryCode: z.enum(['BF', 'BJ', 'CD']),
+  currencyCode: z.enum(['XOF', 'CDF', 'USD']),
   firstName: z.string().min(1, 'Champ requis'),
   lastName: z.string().min(1, 'Champ requis'),
   email: z.string().min(1, 'Champ requis').email('Adresse e-mail invalide'),
@@ -31,8 +38,27 @@ export function SignupPage() {
 
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
-    defaultValues: { companyName: '', firstName: '', lastName: '', email: '', password: '' },
+    defaultValues: {
+      companyName: '',
+      countryCode: 'BF',
+      currencyCode: COUNTRY_META.BF.defaultCurrency,
+      firstName: '',
+      lastName: '',
+      email: '',
+      password: '',
+    },
   });
+
+  const countryCode = form.watch('countryCode');
+  const countryMeta = COUNTRY_META[countryCode];
+  // Seule la RDC propose un choix de devise (CDF/USD) — BF et BJ imposent XOF.
+  const currencyIsChoosable = countryMeta.currencies.length > 1;
+
+  const handleCountryChange = (value: string) => {
+    const nextCountry = value as CountryCode;
+    form.setValue('countryCode', nextCountry);
+    form.setValue('currencyCode', COUNTRY_META[nextCountry].defaultCurrency);
+  };
 
   if (isAuthenticated) {
     return <Navigate to="/dashboard" replace />;
@@ -42,7 +68,9 @@ export function SignupPage() {
     setIsSubmitting(true);
     try {
       await signup({
-        company: { name: values.companyName },
+        companyName: values.companyName,
+        countryCode: values.countryCode,
+        currencyCode: values.currencyCode,
         admin: {
           firstName: values.firstName,
           lastName: values.lastName,
@@ -82,6 +110,70 @@ export function SignupPage() {
                   </FormItem>
                 )}
               />
+
+              <FormField
+                control={form.control}
+                name="countryCode"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Pays d'implantation fiscal</FormLabel>
+                    <Select value={field.value} onValueChange={handleCountryChange}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {COUNTRY_CODES.map((code) => (
+                          <SelectItem key={code} value={code}>
+                            <span className="mr-2">{COUNTRY_META[code].flag}</span>
+                            {COUNTRY_META[code].name}
+                            <span className="ml-1.5 text-xs text-muted-foreground">
+                              ({COUNTRY_META[code].defaultCurrency})
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Sous-champ conditionnel : seule la RDC laisse choisir la devise
+                 de gestion de la paie entre le franc congolais et le dollar. */}
+              {currencyIsChoosable && (
+                <FormField
+                  control={form.control}
+                  name="currencyCode"
+                  render={({ field }) => (
+                    <FormItem className="rounded-md border border-dashed p-3">
+                      <FormLabel>Devise de gestion de la paie</FormLabel>
+                      <FormControl>
+                        <RadioGroup
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          className="flex gap-6 pt-1"
+                        >
+                          <div className="flex items-center gap-2">
+                            <RadioGroupItem value="CDF" id="currency-cdf" />
+                            <Label htmlFor="currency-cdf" className="font-normal">
+                              CDF — Franc Congolais
+                            </Label>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <RadioGroupItem value="USD" id="currency-usd" />
+                            <Label htmlFor="currency-usd" className="font-normal">
+                              USD — Dollar Américain
+                            </Label>
+                          </div>
+                        </RadioGroup>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               <div className="relative pt-2">
                 <Separator />
@@ -125,7 +217,7 @@ export function SignupPage() {
                   <FormItem>
                     <FormLabel>{t('auth.email')}</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="nom@entreprise.bf" {...field} />
+                      <Input type="email" placeholder={`nom@entreprise.${countryCode.toLowerCase()}`} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

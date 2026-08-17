@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import express, { NextFunction, Request, Response } from 'express';
 import cors from 'cors';
+import { ZodError } from 'zod';
 import { authRouter } from './routes/auth.routes.js';
 import { employeesRouter } from './routes/employees.routes.js';
 import { departmentsRouter } from './routes/departments.routes.js';
@@ -31,6 +32,15 @@ app.use((req, res) => {
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   if (err instanceof HttpError) {
     return res.status(err.status).json({ message: err.message });
+  }
+  // Sans ce cas, TOUTE erreur .parse() Zod (n'importe quelle route) tombait
+  // en 500 "Erreur serveur" générique — masquant au frontend le message de
+  // validation utile (ex. "Devise incompatible avec le pays sélectionné").
+  if (err instanceof ZodError) {
+    return res.status(400).json({
+      message: err.issues.map((issue) => issue.message).join(', '),
+      errors: err.issues.map((issue) => ({ path: issue.path.join('.'), message: issue.message })),
+    });
   }
   console.error(err);
   res.status(500).json({ message: 'Erreur serveur' });
