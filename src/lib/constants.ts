@@ -1,5 +1,7 @@
 import {
   ContractType,
+  CountryCode,
+  CurrencyCode,
   EmployeeStatus,
   Gender,
   LeaveType,
@@ -8,6 +10,58 @@ import {
   PaymentMethod,
   UserRole,
 } from '@/types';
+
+// ============================================================
+// Pays & devises (moteur de paie multi-pays)
+// ============================================================
+
+export interface CountryMeta {
+  code: CountryCode;
+  name: string;
+  flag: string;
+  currencies: CurrencyCode[]; // devises disponibles à la création d'entreprise
+  defaultCurrency: CurrencyCode;
+  taxIdLabel: string; // libellé de l'identifiant fiscal, propre au pays
+}
+
+export const COUNTRY_CODES: CountryCode[] = ['BF', 'BJ', 'CD'];
+
+export const COUNTRY_META: Record<CountryCode, CountryMeta> = {
+  BF: {
+    code: 'BF',
+    name: 'Burkina Faso',
+    flag: '🇧🇫',
+    currencies: ['XOF'],
+    defaultCurrency: 'XOF',
+    taxIdLabel: "Numéro NIF (Numéro d'Identifiant Fiscal)",
+  },
+  BJ: {
+    code: 'BJ',
+    name: 'Bénin',
+    flag: '🇧🇯',
+    currencies: ['XOF'],
+    defaultCurrency: 'XOF',
+    taxIdLabel: 'Numéro IFU (Identifiant Fiscal Unique)',
+  },
+  CD: {
+    code: 'CD',
+    name: 'RDC',
+    flag: '🇨🇩',
+    currencies: ['CDF', 'USD'],
+    defaultCurrency: 'CDF',
+    taxIdLabel: 'Numéro Impôt / ID.NAT',
+  },
+};
+
+// Devise d'AFFICHAGE des tarifs LaafiPay (landing page), distincte de
+// COUNTRY_META.defaultCurrency qui décrit la devise de PAIE d'une entreprise.
+// La RDC facture en USD même quand une entreprise choisit de payer ses
+// salariés en CDF — les deux notions ne doivent pas être confondues.
+export const PRICING_CURRENCY_LABEL: Record<CountryCode, string> = {
+  BF: 'FCFA',
+  BJ: 'FCFA',
+  CD: '$ USD',
+};
 
 export const USER_ROLES: UserRole[] = ['admin', 'hr_manager', 'manager', 'accountant', 'employee'];
 

@@ -72,18 +72,24 @@ export interface AuthState {
 // Company / Organisation
 // ============================================================
 
+// Pays supportés par le moteur de paie multi-pays (BF/BJ/CD pour l'instant —
+// voir server/src/payroll/strategy-factory.ts côté backend).
+export type CountryCode = 'BF' | 'BJ' | 'CD';
+export type CurrencyCode = 'XOF' | 'CDF' | 'USD';
+
 export interface Company {
   id: string;
   name: string;
   legalName: string;
-  ifu: string; // Identifiant Fiscal Unique
   rccm: string;
+  countryCode: CountryCode;
+  currencyCode: CurrencyCode;
+  taxIdNumber: string; // NIF (BF) / IFU (BJ) / ID.NAT (CD) — libellé résolu via COUNTRY_META
+  socialSecurityNumber: string; // CNSS (BF/BJ) / INSS (CD)
   address: string;
   city: string;
-  country: string;
   phone: string;
   email: string;
-  cnssNumber: string;
   logo?: string;
 }
 
@@ -320,6 +326,33 @@ export interface SalaryAdvanceRequest {
 // ============================================================
 // Payslip
 // ============================================================
+
+// Contrat générique renvoyé par le moteur de paie multi-pays (une ligne par
+// retenue/charge produite par la stratégie du pays — IUTS+CNSS pour le BF,
+// IRPP+CNSS pour le BJ, IPR+CNSS+INPP+ONEM+Taxe d'apprentissage pour la RDC).
+// Distinct du type `Payslip` ci-dessous, qui reste la forme actuellement
+// renvoyée par l'API/les mocks (champs BF figés : iuts, cnssEmployee...).
+// PayslipView.tsx consomme PayslipResult ; le brancher sur les pages
+// existantes (PayslipPreviewDialog, MyPayslipsTab...) suppose que l'API
+// renvoie déjà ce nouveau format, ce qui n'est pas encore le cas ici.
+export interface PayslipLineItem {
+  code: string; // 'IUTS' | 'IRPP' | 'IPR' | 'CNSS' | 'INPP' | 'ONEM' | 'TAXE_APPRENTISSAGE' | ...
+  label: string;
+  baseAmount: number;
+  rateApplied: number; // fraction, ex. 0.055 = 5,5%
+  employeeAmount: number;
+  employerAmount: number;
+}
+
+export interface PayslipResult {
+  currencyCode: CurrencyCode;
+  grossSalary: number;
+  taxableGross: number;
+  employeeContributions: number; // IUTS/IRPP/IPR + part salariale CNSS
+  employerContributions: number; // part patronale CNSS + INPP + ONEM + Taxe Apprentissage
+  netSalary: number;
+  lineItems: PayslipLineItem[];
+}
 
 export type PayslipSendStatus = 'non_envoye' | 'envoye' | 'lu' | 'echoue';
 

@@ -2,19 +2,34 @@ import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { format, parseISO, differenceInDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { CurrencyCode } from '@/types';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-// Format currency in XOF (Franc CFA)
-export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('fr-BF', {
-    style: 'currency',
-    currency: 'XOF',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
+// Format a monetary amount for one of the currencies supported by the
+// moteur de paie multi-pays. `currencyCode` defaults to XOF so every
+// existing single-argument call site (formatCurrency(amount)) keeps
+// compiling and rendering exactly as before.
+// XOF and CDF are formatted manually rather than via Intl's `currency`
+// style: ICU's XOF/CDF display names vary across browsers/Node versions
+// ("F CFA", "FCFA", "CFA"...), which would make the output unpredictable.
+// USD uses Intl directly since en-US + USD reliably renders "$1,500.00".
+export function formatCurrency(amount: number, currencyCode: CurrencyCode = 'XOF'): string {
+  if (currencyCode === 'USD') {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+  }
+
+  const decimals = currencyCode === 'CDF' ? 2 : 0;
+  const formatted = new Intl.NumberFormat('fr-FR', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
   }).format(amount);
+
+  // Suffixe CDF changé de "FC" à "CDF" : demande explicite et plus récente
+  // que l'implémentation initiale de cet utilitaire.
+  return `${formatted} ${currencyCode === 'CDF' ? 'CDF' : 'FCFA'}`;
 }
 
 // Format a date string to French locale
