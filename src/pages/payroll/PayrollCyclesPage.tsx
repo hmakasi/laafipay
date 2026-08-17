@@ -20,6 +20,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PermissionGate } from '@/components/auth/PermissionGate';
 import { useCreatePayrollCycleMutation, usePayrollCyclesQuery } from '@/hooks/usePayroll';
+import { useCurrentCompanyQuery } from '@/hooks/useCompanies';
 import { PAYROLL_STATUS_VARIANT } from '@/lib/constants';
 import { formatCurrency, formatPeriod } from '@/lib/utils';
 
@@ -27,6 +28,8 @@ export function PayrollCyclesPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { data: cycles, isLoading } = usePayrollCyclesQuery();
+  const { data: company } = useCurrentCompanyQuery();
+  const currencyCode = company?.currencyCode;
   const createMutation = useCreatePayrollCycleMutation();
   const [open, setOpen] = useState(false);
   const [period, setPeriod] = useState('');
@@ -124,9 +127,9 @@ export function PayrollCyclesPage() {
                       <Badge variant={PAYROLL_STATUS_VARIANT[cycle.status]}>{t(`payroll.status_${cycle.status}`)}</Badge>
                     </TableCell>
                     <TableCell>{cycle.employeeCount}</TableCell>
-                    <TableCell>{formatCurrency(cycle.totalBrut)}</TableCell>
-                    <TableCell>{formatCurrency(cycle.totalNet)}</TableCell>
-                    <TableCell>{formatCurrency(cycle.totalEmployerCost)}</TableCell>
+                    <TableCell>{formatCurrency(cycle.totalBrut, currencyCode)}</TableCell>
+                    <TableCell>{formatCurrency(cycle.totalNet, currencyCode)}</TableCell>
+                    <TableCell>{formatCurrency(cycle.totalEmployerCost, currencyCode)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

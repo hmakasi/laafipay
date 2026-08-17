@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuthStore } from '@/store/authStore';
+import { useCurrentCompanyQuery } from '@/hooks/useCompanies';
 import { useDepartmentsQuery, useEmployeesQuery } from '@/hooks/useEmployees';
 import { usePayrollCyclesQuery } from '@/hooks/usePayroll';
 import { usePaymentOrdersQuery } from '@/hooks/usePayments';
@@ -61,6 +62,10 @@ const chartTooltipStyle = {
 export function DashboardPage() {
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
+  const { data: company } = useCurrentCompanyQuery();
+  // `formatCurrency` retombe sur XOF/FCFA par défaut tant que la requête
+  // n'a pas résolu — comportement inchangé pour les entreprises BF/BJ.
+  const currencyCode = company?.currencyCode;
   const { data: employeesPage, isLoading: loadingEmployees } = useEmployeesQuery({ perPage: 1000 });
   const { data: departments } = useDepartmentsQuery();
   const { data: cycles, isLoading: loadingCycles } = usePayrollCyclesQuery();
@@ -123,7 +128,7 @@ export function DashboardPage() {
         <StatCard
           icon={Wallet}
           label={t('dashboard.totalPayroll')}
-          value={latestCycle ? formatCurrency(latestCycle.totalNet) : '—'}
+          value={latestCycle ? formatCurrency(latestCycle.totalNet, currencyCode) : '—'}
           loading={loadingCycles}
         />
         <StatCard icon={AlertTriangle} label={t('dashboard.pendingLeaves')} value={String(pendingLeaves?.length ?? 0)} />
@@ -220,7 +225,7 @@ export function DashboardPage() {
                       tickLine={false}
                       tickFormatter={(v) => `${Math.round(v / 1000)}k`}
                     />
-                    <Tooltip contentStyle={chartTooltipStyle} formatter={(v) => formatCurrency(Number(v))} />
+                    <Tooltip contentStyle={chartTooltipStyle} formatter={(v) => formatCurrency(Number(v), currencyCode)} />
                     <Line type="monotone" dataKey="cout" stroke={COST_HUE} strokeWidth={2} dot={{ r: 3 }} />
                   </LineChart>
                 </ResponsiveContainer>
@@ -262,7 +267,7 @@ export function DashboardPage() {
                 <div key={cycle.id} className="flex items-center justify-between border-b py-2 text-sm last:border-0">
                   <span className="font-medium capitalize">{formatPeriod(cycle.period)}</span>
                   <span className="text-muted-foreground">{cycle.employeeCount} employés</span>
-                  <span>{formatCurrency(cycle.totalNet)}</span>
+                  <span>{formatCurrency(cycle.totalNet, currencyCode)}</span>
                   <span className="capitalize text-muted-foreground">{t(`payroll.status_${cycle.status}`)}</span>
                 </div>
               ))}

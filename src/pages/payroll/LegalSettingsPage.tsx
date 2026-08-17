@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useAuthStore } from '@/store/authStore';
 import { useCreateLegalSettingsMutation, useLegalSettingsQuery } from '@/hooks/usePayroll';
+import { useCurrentCompanyQuery } from '@/hooks/useCompanies';
 import { formatCurrency, formatDate } from '@/lib/utils';
 
 const bracketSchema = z.object({
@@ -39,6 +40,8 @@ export function LegalSettingsPage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const { data: settings, isLoading } = useLegalSettingsQuery();
+  const { data: company } = useCurrentCompanyQuery();
+  const currencyCode = company?.currencyCode;
   const createMutation = useCreateLegalSettingsMutation();
   const [open, setOpen] = useState(false);
 
@@ -180,7 +183,7 @@ export function LegalSettingsPage() {
                 {settings?.map((s) => (
                   <TableRow key={s.id}>
                     <TableCell>{formatDate(s.effectiveDate)}</TableCell>
-                    <TableCell>{formatCurrency(s.smig)}</TableCell>
+                    <TableCell>{formatCurrency(s.smig, currencyCode)}</TableCell>
                     <TableCell>{s.cnssEmployeeRate}%</TableCell>
                     <TableCell>{s.cnssEmployerRate}%</TableCell>
                     <TableCell>{s.iutsBrackets.length}</TableCell>

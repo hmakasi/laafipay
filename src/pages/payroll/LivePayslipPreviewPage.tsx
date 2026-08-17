@@ -11,6 +11,7 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useEmployeesQuery } from '@/hooks/useEmployees';
 import { useLegalSettingsQuery } from '@/hooks/usePayroll';
+import { useCurrentCompanyQuery } from '@/hooks/useCompanies';
 import { computePayrollEntry } from '@/lib/payrollEngine';
 import { formatCurrency } from '@/lib/utils';
 
@@ -32,10 +33,14 @@ function VariableInput({
 }
 
 function PayslipLine({ label, value, strong }: { label: string; value: number; strong?: boolean }) {
+  // Hook appelé ici plutôt que de faire passer currencyCode en prop sur
+  // chaque site d'appel : queryKey ['companies','me'] partagée avec
+  // LivePayslipPreviewPage, React Query déduplique — pas de requête en plus.
+  const { data: company } = useCurrentCompanyQuery();
   return (
     <div className={`flex items-center justify-between ${strong ? 'font-semibold text-foreground' : 'text-sm text-muted-foreground'}`}>
       <span>{label}</span>
-      <span className={strong ? 'text-foreground' : ''}>{formatCurrency(value)}</span>
+      <span className={strong ? 'text-foreground' : ''}>{formatCurrency(value, company?.currencyCode)}</span>
     </div>
   );
 }

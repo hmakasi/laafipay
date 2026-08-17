@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { PermissionGate } from '@/components/auth/PermissionGate';
 import { useCreateBankTransferPaymentMutation, useCreateMobileMoneyPaymentMutation, usePaymentOrdersQuery } from '@/hooks/usePayments';
+import { useCurrentCompanyQuery } from '@/hooks/useCompanies';
 import { useAuthStore } from '@/store/authStore';
 import { PAYMENT_STATUS_VARIANT } from '@/lib/constants';
 import { formatCurrency, formatPeriod } from '@/lib/utils';
@@ -31,6 +32,8 @@ function EligibleEmployeesDialog({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const mobileMoneyMutation = useCreateMobileMoneyPaymentMutation();
   const bankTransferMutation = useCreateBankTransferPaymentMutation();
+  const { data: company } = useCurrentCompanyQuery();
+  const currencyCode = company?.currencyCode;
 
   const eligible = useMemo(
     () =>
@@ -118,13 +121,13 @@ function EligibleEmployeesDialog({
                         : `${emp!.bankInfo?.bankName ?? '—'} · ${emp!.bankInfo?.rib ?? '—'}`}
                     </span>
                   </span>
-                  <span className="text-sm font-medium">{formatCurrency(entry.salaireNet)}</span>
+                  <span className="text-sm font-medium">{formatCurrency(entry.salaireNet, currencyCode)}</span>
                 </label>
               ))}
             </div>
             <div className="flex items-center justify-between border-t pt-3 text-sm">
               <span className="text-muted-foreground">{selected.size} sélectionné(s)</span>
-              <span className="font-semibold">{formatCurrency(total)}</span>
+              <span className="font-semibold">{formatCurrency(total, currencyCode)}</span>
             </div>
           </>
         )}
@@ -143,6 +146,8 @@ export function InitiatePaymentSection({ cycle, employees }: { cycle: PayrollCyc
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { data: orders } = usePaymentOrdersQuery(cycle.id);
+  const { data: company } = useCurrentCompanyQuery();
+  const currencyCode = company?.currencyCode;
 
   return (
     <Card>
@@ -170,7 +175,7 @@ export function InitiatePaymentSection({ cycle, employees }: { cycle: PayrollCyc
                   {formatPeriod(cycle.period)}
                 </span>
                 <span className="flex items-center gap-3">
-                  <span className="text-muted-foreground">{formatCurrency(order.totalAmount)}</span>
+                  <span className="text-muted-foreground">{formatCurrency(order.totalAmount, currencyCode)}</span>
                   <Badge variant={PAYMENT_STATUS_VARIANT[order.status]}>{t(`payments.status_${order.status}`)}</Badge>
                 </span>
               </button>

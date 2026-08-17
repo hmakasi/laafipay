@@ -31,6 +31,7 @@ import {
 import { PermissionGate } from '@/components/auth/PermissionGate';
 import { usePayrollCycleQuery, useUpdatePayrollEntryMutation, useValidatePayrollCycleMutation } from '@/hooks/usePayroll';
 import { useEmployeesQuery } from '@/hooks/useEmployees';
+import { useCurrentCompanyQuery } from '@/hooks/useCompanies';
 import { useAuthStore } from '@/store/authStore';
 import { PAYROLL_STATUS_VARIANT } from '@/lib/constants';
 import { formatCurrency, formatPeriod } from '@/lib/utils';
@@ -122,6 +123,8 @@ export function PayrollCycleDetailPage() {
   const user = useAuthStore((s) => s.user);
   const { data: cycle, isLoading } = usePayrollCycleQuery(id);
   const { data: employeesPage } = useEmployeesQuery({ perPage: 1000 });
+  const { data: company } = useCurrentCompanyQuery();
+  const currencyCode = company?.currencyCode;
   const validateMutation = useValidatePayrollCycleMutation();
   const [editingEntry, setEditingEntry] = useState<PayrollEntry | null>(null);
 
@@ -171,7 +174,7 @@ export function PayrollCycleDetailPage() {
                 <AlertDialogHeader>
                   <AlertDialogTitle>{t('payroll.validateCycle')}</AlertDialogTitle>
                   <AlertDialogDescription>
-                    {formatPeriod(cycle.period)} · {cycle.entries.length} employés · {formatCurrency(cycle.totalNet)}
+                    {formatPeriod(cycle.period)} · {cycle.entries.length} employés · {formatCurrency(cycle.totalNet, currencyCode)}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -196,15 +199,15 @@ export function PayrollCycleDetailPage() {
         <CardContent className="grid grid-cols-3 gap-4 text-sm">
           <div>
             <div className="text-muted-foreground">{t('payroll.salaireBrut')}</div>
-            <div className="text-lg font-semibold">{formatCurrency(cycle.totalBrut)}</div>
+            <div className="text-lg font-semibold">{formatCurrency(cycle.totalBrut, currencyCode)}</div>
           </div>
           <div>
             <div className="text-muted-foreground">{t('payroll.salaireNet')}</div>
-            <div className="text-lg font-semibold">{formatCurrency(cycle.totalNet)}</div>
+            <div className="text-lg font-semibold">{formatCurrency(cycle.totalNet, currencyCode)}</div>
           </div>
           <div>
             <div className="text-muted-foreground">{t('payroll.coutEmployeur')}</div>
-            <div className="text-lg font-semibold">{formatCurrency(cycle.totalEmployerCost)}</div>
+            <div className="text-lg font-semibold">{formatCurrency(cycle.totalEmployerCost, currencyCode)}</div>
           </div>
         </CardContent>
       </Card>
@@ -233,12 +236,12 @@ export function PayrollCycleDetailPage() {
               {cycle.entries.map((entry) => (
                 <TableRow key={entry.id}>
                   <TableCell className="font-medium">{employeeName(entry.employeeId)}</TableCell>
-                  <TableCell>{formatCurrency(entry.baseSalary)}</TableCell>
-                  <TableCell>{formatCurrency(entry.salaireBrut)}</TableCell>
-                  <TableCell>{formatCurrency(entry.cnssEmployee)}</TableCell>
-                  <TableCell>{formatCurrency(entry.iuts)}</TableCell>
-                  <TableCell className="font-semibold">{formatCurrency(entry.salaireNet)}</TableCell>
-                  <TableCell>{formatCurrency(entry.coutEmployeur)}</TableCell>
+                  <TableCell>{formatCurrency(entry.baseSalary, currencyCode)}</TableCell>
+                  <TableCell>{formatCurrency(entry.salaireBrut, currencyCode)}</TableCell>
+                  <TableCell>{formatCurrency(entry.cnssEmployee, currencyCode)}</TableCell>
+                  <TableCell>{formatCurrency(entry.iuts, currencyCode)}</TableCell>
+                  <TableCell className="font-semibold">{formatCurrency(entry.salaireNet, currencyCode)}</TableCell>
+                  <TableCell>{formatCurrency(entry.coutEmployeur, currencyCode)}</TableCell>
                   <PermissionGate permission="payroll:write">
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" disabled={isValidated} onClick={() => setEditingEntry(entry)}>

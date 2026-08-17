@@ -7,6 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { PermissionGate } from '@/components/auth/PermissionGate';
 import { useSendPayslipMutation } from '@/hooks/usePayslips';
+import { useCurrentCompanyQuery } from '@/hooks/useCompanies';
 import { SEND_STATUS_VARIANT } from '@/lib/constants';
 import { formatCurrency, formatPeriod } from '@/lib/utils';
 import { Employee, Payslip } from '@/types';
@@ -24,6 +25,8 @@ export function PayslipPreviewDialog({
 }) {
   const { t } = useTranslation();
   const sendMutation = useSendPayslipMutation();
+  const { data: company } = useCurrentCompanyQuery();
+  const currencyCode = company?.currencyCode;
 
   const handleSend = async (channel: 'email' | 'whatsapp' | 'sms') => {
     await sendMutation.mutateAsync({ id: payslip.id, channel });
@@ -67,29 +70,29 @@ export function PayslipPreviewDialog({
             <div className="space-y-1">
               <div className="flex justify-between">
                 <span>{t('employees.baseSalary')}</span>
-                <span>{formatCurrency(payslip.baseSalary)}</span>
+                <span>{formatCurrency(payslip.baseSalary, currencyCode)}</span>
               </div>
               {lines.map((l, i) => (
                 <div key={i} className="flex justify-between text-muted-foreground">
                   <span>{l.label}</span>
-                  <span>{l.sign > 0 ? '+' : '-'}{formatCurrency(l.amount)}</span>
+                  <span>{l.sign > 0 ? '+' : '-'}{formatCurrency(l.amount, currencyCode)}</span>
                 </div>
               ))}
               <div className="flex justify-between border-t pt-1 font-medium">
                 <span>{t('payroll.salaireBrut')}</span>
-                <span>{formatCurrency(payslip.salaireBrut)}</span>
+                <span>{formatCurrency(payslip.salaireBrut, currencyCode)}</span>
               </div>
               <div className="flex justify-between text-muted-foreground">
                 <span>{t('payroll.cnssEmployee')}</span>
-                <span>-{formatCurrency(payslip.cnssEmployee)}</span>
+                <span>-{formatCurrency(payslip.cnssEmployee, currencyCode)}</span>
               </div>
               <div className="flex justify-between text-muted-foreground">
                 <span>{t('payroll.iuts')}</span>
-                <span>-{formatCurrency(payslip.iuts)}</span>
+                <span>-{formatCurrency(payslip.iuts, currencyCode)}</span>
               </div>
               <div className="flex justify-between border-t pt-1 text-base font-semibold text-primary">
                 <span>{t('payslips.netToPay')}</span>
-                <span>{formatCurrency(payslip.salaireNet)}</span>
+                <span>{formatCurrency(payslip.salaireNet, currencyCode)}</span>
               </div>
             </div>
           </div>

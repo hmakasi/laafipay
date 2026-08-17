@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { usePaymentOrdersQuery } from '@/hooks/usePayments';
 import { usePayrollCyclesQuery } from '@/hooks/usePayroll';
+import { useCurrentCompanyQuery } from '@/hooks/useCompanies';
 import { PAYMENT_STATUS_VARIANT } from '@/lib/constants';
 import { formatCurrency, formatDate, formatPeriod } from '@/lib/utils';
 import { AdvancesTab } from '@/pages/payments/AdvancesTab';
@@ -17,6 +18,8 @@ export function PaymentsListPage() {
   const navigate = useNavigate();
   const { data: orders, isLoading } = usePaymentOrdersQuery();
   const { data: cycles } = usePayrollCyclesQuery();
+  const { data: company } = useCurrentCompanyQuery();
+  const currencyCode = company?.currencyCode;
 
   const sorted = [...(orders ?? [])].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
@@ -82,7 +85,7 @@ export function PaymentsListPage() {
                             <Badge variant={PAYMENT_STATUS_VARIANT[order.status]}>{t(`payments.status_${order.status}`)}</Badge>
                           </TableCell>
                           <TableCell>{order.transactions.length}</TableCell>
-                          <TableCell>{formatCurrency(order.totalAmount)}</TableCell>
+                          <TableCell>{formatCurrency(order.totalAmount, currencyCode)}</TableCell>
                           <TableCell className="text-muted-foreground">{formatDate(order.createdAt, 'dd/MM/yyyy HH:mm')}</TableCell>
                         </TableRow>
                       );

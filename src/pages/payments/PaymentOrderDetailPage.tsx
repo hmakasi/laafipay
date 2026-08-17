@@ -28,6 +28,7 @@ import {
 } from '@/hooks/usePayments';
 import { useEmployeesQuery } from '@/hooks/useEmployees';
 import { usePayrollCycleQuery } from '@/hooks/usePayroll';
+import { useCurrentCompanyQuery } from '@/hooks/useCompanies';
 import { useAuthStore } from '@/store/authStore';
 import { PAYMENT_STATUS_VARIANT } from '@/lib/constants';
 import { downloadBlob, formatCurrency, formatDate, formatPeriod } from '@/lib/utils';
@@ -38,6 +39,8 @@ export function PaymentOrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const user = useAuthStore((s) => s.user);
   const { data: order, isLoading } = usePaymentOrderQuery(id);
+  const { data: company } = useCurrentCompanyQuery();
+  const currencyCode = company?.currencyCode;
   const { data: employeesPage } = useEmployeesQuery({ perPage: 1000 });
   const { data: cycle } = usePayrollCycleQuery(order?.cycleId);
 
@@ -115,7 +118,7 @@ export function PaymentOrderDetailPage() {
                   <AlertDialogContent>
                     <AlertDialogHeader>
                       <AlertDialogTitle>{t('payments.rejectOrder')}</AlertDialogTitle>
-                      <AlertDialogDescription>{formatCurrency(order.totalAmount)} — {order.transactions.length} bénéficiaires</AlertDialogDescription>
+                      <AlertDialogDescription>{formatCurrency(order.totalAmount, currencyCode)} — {order.transactions.length} bénéficiaires</AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>{t('app.cancel')}</AlertDialogCancel>
@@ -134,7 +137,7 @@ export function PaymentOrderDetailPage() {
                     <AlertDialogHeader>
                       <AlertDialogTitle>{t('payments.doubleValidation')}</AlertDialogTitle>
                       <AlertDialogDescription>
-                        {formatCurrency(order.totalAmount)} — {order.transactions.length} bénéficiaires — préparé par{' '}
+                        {formatCurrency(order.totalAmount, currencyCode)} — {order.transactions.length} bénéficiaires — préparé par{' '}
                         {order.createdBy}
                       </AlertDialogDescription>
                     </AlertDialogHeader>
@@ -169,7 +172,7 @@ export function PaymentOrderDetailPage() {
         <CardContent className="grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
           <div>
             <div className="text-muted-foreground">{t('app.amount')}</div>
-            <div className="text-lg font-semibold">{formatCurrency(order.totalAmount)}</div>
+            <div className="text-lg font-semibold">{formatCurrency(order.totalAmount, currencyCode)}</div>
           </div>
           <div>
             <div className="text-muted-foreground">Préparé par</div>
@@ -212,7 +215,7 @@ export function PaymentOrderDetailPage() {
                       {txn.operator ? t(`employees.operator_${txn.operator}`) : '—'} · {txn.phoneNumber}
                     </TableCell>
                   )}
-                  <TableCell>{formatCurrency(txn.amount)}</TableCell>
+                  <TableCell>{formatCurrency(txn.amount, currencyCode)}</TableCell>
                   <TableCell className="text-muted-foreground">{txn.reference ?? '—'}</TableCell>
                   <TableCell>
                     <Badge variant={PAYMENT_STATUS_VARIANT[txn.status]}>{t(`payments.status_${txn.status}`)}</Badge>

@@ -6,6 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAuthStore } from '@/store/authStore';
 import { usePayslipsQuery } from '@/hooks/usePayslips';
+import { useCurrentCompanyQuery } from '@/hooks/useCompanies';
 import { SEND_STATUS_VARIANT } from '@/lib/constants';
 import { formatCurrency, formatPeriod } from '@/lib/utils';
 import { Payslip } from '@/types';
@@ -17,6 +18,8 @@ export function MyPayslipsTab() {
   const [previewing, setPreviewing] = useState<Payslip | null>(null);
 
   const { data: payslips, isLoading } = usePayslipsQuery(user?.employeeId);
+  const { data: company } = useCurrentCompanyQuery();
+  const currencyCode = company?.currencyCode;
   const sorted = user?.employeeId ? [...(payslips ?? [])].sort((a, b) => b.period.localeCompare(a.period)) : [];
 
   return (
@@ -43,7 +46,7 @@ export function MyPayslipsTab() {
               {sorted.map((p) => (
                 <TableRow key={p.id} className="cursor-pointer" onClick={() => setPreviewing(p)}>
                   <TableCell className="font-medium capitalize">{formatPeriod(p.period)}</TableCell>
-                  <TableCell>{formatCurrency(p.salaireNet)}</TableCell>
+                  <TableCell>{formatCurrency(p.salaireNet, currencyCode)}</TableCell>
                   <TableCell>
                     <Badge variant={SEND_STATUS_VARIANT[p.emailStatus]}>{t(`payslips.emailStatus_${p.emailStatus}`)}</Badge>
                   </TableCell>

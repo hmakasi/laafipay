@@ -14,6 +14,7 @@ import { PermissionGate } from '@/components/auth/PermissionGate';
 import { useGeneratePayslipsMutation, usePayslipsQuery, useSendAllPayslipsMutation } from '@/hooks/usePayslips';
 import { useEmployeesQuery } from '@/hooks/useEmployees';
 import { usePayrollCyclesQuery } from '@/hooks/usePayroll';
+import { useCurrentCompanyQuery } from '@/hooks/useCompanies';
 import { SEND_STATUS_VARIANT } from '@/lib/constants';
 import { formatCurrency, formatPeriod } from '@/lib/utils';
 import { Payslip } from '@/types';
@@ -27,6 +28,8 @@ export function PayslipsListPage() {
   const [previewing, setPreviewing] = useState<Payslip | null>(null);
 
   const { data: cycles } = usePayrollCyclesQuery();
+  const { data: company } = useCurrentCompanyQuery();
+  const currencyCode = company?.currencyCode;
   const eligibleCycles = useMemo(
     () => (cycles ?? []).filter((c) => c.status === 'valide' || c.status === 'paye').sort((a, b) => b.period.localeCompare(a.period)),
     [cycles]
@@ -151,7 +154,7 @@ export function PayslipsListPage() {
                           </TableCell>
                         </PermissionGate>
                         <TableCell className="font-medium">{emp ? `${emp.firstName} ${emp.lastName}` : p.employeeId}</TableCell>
-                        <TableCell>{formatCurrency(p.salaireNet)}</TableCell>
+                        <TableCell>{formatCurrency(p.salaireNet, currencyCode)}</TableCell>
                         <TableCell>
                           <Badge variant={SEND_STATUS_VARIANT[p.emailStatus]}>{t(`payslips.emailStatus_${p.emailStatus}`)}</Badge>
                         </TableCell>

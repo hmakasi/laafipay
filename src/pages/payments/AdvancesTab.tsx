@@ -14,6 +14,7 @@ import {
   usePayAdvanceMutation,
 } from '@/hooks/useAdvances';
 import { useEmployeesQuery } from '@/hooks/useEmployees';
+import { useCurrentCompanyQuery } from '@/hooks/useCompanies';
 import { useAuthStore } from '@/store/authStore';
 import { ADVANCE_STATUS_VARIANT } from '@/lib/constants';
 import { formatCurrency, formatDate } from '@/lib/utils';
@@ -23,6 +24,8 @@ export function AdvancesTab() {
   const user = useAuthStore((s) => s.user);
   const { data: advances, isLoading } = useAdvanceRequestsQuery();
   const { data: employeesPage } = useEmployeesQuery({ perPage: 1000 });
+  const { data: company } = useCurrentCompanyQuery();
+  const currencyCode = company?.currencyCode;
   const approveMutation = useApproveAdvanceMutation();
   const payMutation = usePayAdvanceMutation();
   const deductMutation = useMarkAdvanceDeductedMutation();
@@ -82,7 +85,7 @@ export function AdvancesTab() {
               {sorted.map((advance) => (
                 <TableRow key={advance.id}>
                   <TableCell className="font-medium">{employeeName(advance.employeeId)}</TableCell>
-                  <TableCell>{formatCurrency(advance.amount)}</TableCell>
+                  <TableCell>{formatCurrency(advance.amount, currencyCode)}</TableCell>
                   <TableCell className="text-muted-foreground">{formatDate(advance.requestedAt, 'dd/MM/yyyy')}</TableCell>
                   <TableCell>
                     <Badge variant={ADVANCE_STATUS_VARIANT[advance.status]}>

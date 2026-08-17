@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { PermissionGate } from '@/components/auth/PermissionGate';
 import { useDeleteEmployeeMutation, useDepartmentsQuery, useEmployeeQuery } from '@/hooks/useEmployees';
+import { useCurrentCompanyQuery } from '@/hooks/useCompanies';
 import { EMPLOYEE_STATUS_VARIANT } from '@/lib/constants';
 import { formatCurrency, formatDate, getInitials } from '@/lib/utils';
 
@@ -39,6 +40,8 @@ export function EmployeeDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { data: emp, isLoading } = useEmployeeQuery(id);
   const { data: departments } = useDepartmentsQuery();
+  const { data: company } = useCurrentCompanyQuery();
+  const currencyCode = company?.currencyCode;
   const deleteMutation = useDeleteEmployeeMutation();
 
   const handleDelete = async () => {
@@ -165,7 +168,7 @@ export function EmployeeDetailPage() {
         <TabsContent value="salary">
           <Card>
             <CardContent className="grid grid-cols-2 gap-4 p-6 md:grid-cols-3">
-              <Field label={t('employees.baseSalary')} value={formatCurrency(emp.baseSalary)} />
+              <Field label={t('employees.baseSalary')} value={formatCurrency(emp.baseSalary, currencyCode)} />
               <Field label={t('employees.paymentMethod')} value={t(`employees.payment_${emp.paymentMethod}`)} />
               {emp.mobileMoneyInfo && (
                 <>
