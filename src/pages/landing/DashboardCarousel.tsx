@@ -1,11 +1,49 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Info } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
+import { COUNTRY_CODES, COUNTRY_META } from '@/lib/constants';
+import { useLandingCountryStore } from '@/store/landingCountryStore';
+import { CountryCode } from '@/types';
 
 const SLIDE_DURATION_MS = 4000;
+const DECLARATIONS_SLIDE_INDEX = 2;
+
+// Sélecteur de pays persistant en haut du mock-up : ne pilote que le slide
+// "Déclarations Sociales & Fiscales" (rows dynamiques), les slides masse
+// salariale / WhatsApp restent inchangés d'un pays à l'autre.
+function CountrySwitch({ value, onChange }: { value: CountryCode; onChange: (code: CountryCode) => void }) {
+  const { t } = useTranslation();
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className="hidden text-xs text-muted-foreground sm:inline">
+        {t('landing.hero.mockup.countrySelectorLabel')}
+      </span>
+      <div className="inline-flex items-center gap-0.5 rounded-full border border-border bg-background p-0.5">
+        {COUNTRY_CODES.map((code) => (
+          <button
+            key={code}
+            type="button"
+            aria-pressed={value === code}
+            aria-label={COUNTRY_META[code].name}
+            title={COUNTRY_META[code].name}
+            onClick={() => onChange(code)}
+            className={cn(
+              'flex h-6 w-7 items-center justify-center rounded-full text-sm leading-none transition-all',
+              value === code ? 'bg-card shadow-sm ring-1 ring-border' : 'opacity-45 hover:opacity-80'
+            )}
+          >
+            {COUNTRY_META[code].flag}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 type BadgeTone = 'success' | 'warning' | 'info';
 
@@ -42,8 +80,13 @@ function LiveIndicator({ label }: { label: string }) {
   );
 }
 
-function useSlides(): Slide[] {
+function useSlides(country: CountryCode): Slide[] {
   const { t } = useTranslation();
+  const countryLabels = t(`landing.hero.mockup.countries.${country}`, { returnObjects: true }) as {
+    cnssLabel: string;
+    taxLabel: string;
+    paymentLabel: string;
+  };
 
   return [
     {
@@ -101,20 +144,20 @@ function useSlides(): Slide[] {
       rows: [
         {
           leading: { kind: 'emoji', icon: '🏛️' },
-          label: t('landing.hero.mockup.cnssLabel'),
+          label: countryLabels.cnssLabel,
           badgeText: t('landing.hero.mockup.cnssReady'),
           badgeTone: 'success',
         },
         {
           leading: { kind: 'emoji', icon: '📑' },
-          label: t('landing.hero.mockup.iutsLabel'),
-          badgeText: t('landing.hero.mockup.iutsCompliant'),
+          label: countryLabels.taxLabel,
+          badgeText: t('landing.hero.mockup.taxCompliant'),
           badgeTone: 'success',
         },
         {
-          leading: { kind: 'emoji', icon: '📊' },
-          label: t('landing.hero.mockup.bankOrderLabel'),
-          badgeText: t('landing.hero.mockup.bankOrderGenerated'),
+          leading: { kind: 'emoji', icon: '💸' },
+          label: countryLabels.paymentLabel,
+          badgeText: t('landing.hero.mockup.paymentGenerated'),
           badgeTone: 'info',
         },
       ],
@@ -123,7 +166,12 @@ function useSlides(): Slide[] {
 }
 
 export function DashboardCarousel() {
-  const slides = useSlides();
+  const { t } = useTranslation();
+  // Store partagé avec CountrySelector (Navbar) et PricingSection : changer le
+  // pays dans le header met aussi à jour ce mock-up, et inversement.
+  const country = useLandingCountryStore((s) => s.country);
+  const setCountry = useLandingCountryStore((s) => s.setCountry);
+  const slides = useSlides(country);
   const [activeIndex, setActiveIndex] = useState(0);
 
   useEffect(() => {
@@ -137,6 +185,11 @@ export function DashboardCarousel() {
 
   return (
     <div className="animate-fade-in overflow-hidden rounded-xl border border-border bg-card shadow-xl">
+      <div className="flex items-center justify-between border-b border-border bg-muted/20 px-4 py-2 sm:px-5">
+        <span className="text-xs font-medium text-muted-foreground">LaafiPay</span>
+        <CountrySwitch value={country} onChange={setCountry} />
+      </div>
+
       <div className="flex">
         <div className="hidden w-14 flex-col gap-3 bg-slate-900 p-3 sm:flex">
           {Array.from({ length: 5 }).map((_, i) => (
@@ -180,6 +233,13 @@ export function DashboardCarousel() {
                 </div>
               ))}
             </div>
+
+            {activeIndex === DECLARATIONS_SLIDE_INDEX && (
+              <p className="mt-4 flex items-start gap-1.5 text-[11px] leading-snug text-muted-foreground/70">
+                <Info className="mt-0.5 h-3 w-3 shrink-0" />
+                {t('landing.hero.mockup.declarationsNote')}
+              </p>
+            )}
           </div>
         </div>
       </div>

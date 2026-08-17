@@ -421,15 +421,15 @@
       "goToApp": "Accéder à mon espace"
     },
     "hero": {
-      "badge": "Fait pour le Burkina Faso",
-      "title": "La paie et les RH de votre entreprise, simplifiées",
-      "subtitle": "LaafiPay centralise la gestion de vos employés, le calcul automatique de la paie et les versements Mobile Money — 100% conforme aux règles CNSS et IUTS du Burkina Faso.",
+      "badge": "Pensé et adapté pour l'Afrique 🌍",
+      "title": "La paie et les RH de votre entreprise en Afrique, simplifiées",
+      "subtitle": "LaafiPay centralise la gestion de vos employés, le calcul automatique de la paie et les versements Mobile Money — 100% conforme aux règles fiscales et sociales de votre pays (IUTS, IRPP, IPR, CNSS).",
       "ctaPrimary": "Inscrire mon entreprise",
       "ctaSecondary": "Demander une démo",
       "reassurance": {
         "trial": "14 jours d'essai gratuit",
         "whatsapp": "Bulletins & Congés via WhatsApp",
-        "compliance": "Conforme CNSS & IUTS"
+        "compliance": "Conformité fiscale locale automatisée (Zone OHADA / RDC)"
       },
       "mockupCaption": "Aperçu du tableau de bord",
       "mockup": {
@@ -446,12 +446,28 @@
         "pendingValidation": "En attente de validation",
         "declarationsTitle": "Déclarations Sociales & Fiscales",
         "month": "Juillet",
-        "cnssLabel": "Cotisations CNSS (Burkina Faso)",
+        "countrySelectorLabel": "Simuler pour",
         "cnssReady": "Calculé & Prêt",
-        "iutsLabel": "Retenue IUTS (Direction des Impôts)",
-        "iutsCompliant": "Conforme",
-        "bankOrderLabel": "Ordre de virement bancaire global",
-        "bankOrderGenerated": "Généré (.pdf)"
+        "taxCompliant": "Conforme",
+        "paymentGenerated": "Généré",
+        "declarationsNote": "Chaque moteur fiscal s'adapte automatiquement au pays de votre entreprise : calcul par tranches progressives, abattements pour charges de famille et plafonds CNSS locaux mis à jour en continu.",
+        "countries": {
+          "BF": {
+            "cnssLabel": "Cotisations CNSS (Burkina Faso)",
+            "taxLabel": "Retenue IUTS (Direction Générale des Impôts)",
+            "paymentLabel": "Virement Mobile Money (Orange Money / Moov)"
+          },
+          "BJ": {
+            "cnssLabel": "Cotisations CNSS (Caisse Nationale de Sécurité Sociale)",
+            "taxLabel": "Retenue IRPP (Direction Générale des Impôts)",
+            "paymentLabel": "Virement bancaire & Mobile Money (MTN / Moov)"
+          },
+          "CD": {
+            "cnssLabel": "Cotisations CNSS & INPP / ONEM",
+            "taxLabel": "Retenue IPR (Direction Générale des Impôts)",
+            "paymentLabel": "Paiement Multi-Devises (CDF / USD)"
+          }
+        }
       }
     },
     "features": {
@@ -499,14 +515,19 @@
       "starter": {
         "name": "Starter",
         "description": "Pour les petites équipes qui démarrent.",
-        "price": "10 000 FCFA",
+        "priceByCountry": { "BF": "10 000 FCFA", "BJ": "10 000 FCFA", "CD": "$15" },
         "trial": "2 semaines gratuites",
-        "features": ["Jusqu'à 10 employés", "Calcul IUTS & CNSS", "Bulletins PDF & WhatsApp", "Gestion des départements"]
+        "features": ["Jusqu'à 10 employés", "Bulletins PDF & WhatsApp", "Gestion des départements"],
+        "taxFeatureByCountry": {
+          "BF": "Calcul IUTS & CNSS",
+          "BJ": "Calcul IRPP & CNSS",
+          "CD": "Calcul IPR, CNSS, INPP & ONEM"
+        }
       },
       "business": {
         "name": "Business",
         "description": "Pour les entreprises en croissance.",
-        "price": "35 000 FCFA",
+        "priceByCountry": { "BF": "35 000 FCFA", "BJ": "35 000 FCFA", "CD": "$55" },
         "features": [
           "Jusqu'à 50 employés",
           "Tout Starter +",

@@ -5,12 +5,14 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { useLandingCountryStore } from '@/store/landingCountryStore';
 
 const PLANS = ['starter', 'business', 'enterprise'] as const;
 const HIGHLIGHTED_PLAN = 'business';
 
 export function PricingSection() {
   const { t } = useTranslation();
+  const country = useLandingCountryStore((s) => s.country);
 
   return (
     <section id="tarifs" className="scroll-mt-16 border-t border-border bg-muted/30 py-16 md:py-24">
@@ -23,7 +25,19 @@ export function PricingSection() {
         <div className="mx-auto mt-12 grid max-w-5xl gap-6 md:grid-cols-3">
           {PLANS.map((plan) => {
             const isHighlighted = plan === HIGHLIGHTED_PLAN;
-            const features = t(`landing.pricing.${plan}.features`, { returnObjects: true }) as string[];
+            // Enterprise reste "Sur devis" quel que soit le pays ; starter/business
+            // ont un prix par pays (FCFA pour BF/BJ, USD pour la RDC).
+            const price =
+              plan === 'enterprise'
+                ? t('landing.pricing.enterprise.price')
+                : t(`landing.pricing.${plan}.priceByCountry.${country}`);
+            const baseFeatures = t(`landing.pricing.${plan}.features`, { returnObjects: true }) as string[];
+            // Seule l'offre Starter affiche une ligne fiscale dédiée
+            // (IUTS/IRPP/IPR) : insérée juste après "Jusqu'à 10 employés".
+            const features =
+              plan === 'starter'
+                ? [baseFeatures[0], t(`landing.pricing.starter.taxFeatureByCountry.${country}`), ...baseFeatures.slice(1)]
+                : baseFeatures;
             const trial = t(`landing.pricing.${plan}.trial`, { defaultValue: '' });
             return (
               <Card
@@ -39,7 +53,7 @@ export function PricingSection() {
                   <CardTitle>{t(`landing.pricing.${plan}.name`)}</CardTitle>
                   <CardDescription>{t(`landing.pricing.${plan}.description`)}</CardDescription>
                   <p className="pt-2 text-3xl font-bold text-foreground">
-                    {t(`landing.pricing.${plan}.price`)}
+                    {price}
                     {plan !== 'enterprise' && (
                       <span className="text-base font-normal text-muted-foreground">{t('landing.pricing.period')}</span>
                     )}

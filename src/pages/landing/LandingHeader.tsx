@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/store/authStore';
+import { CountrySelector } from '@/pages/landing/CountrySelector';
 
 const ANCHOR_LINKS = [
   { href: '#fonctionnalites', key: 'landing.nav.features' },
@@ -36,7 +37,9 @@ export function LandingHeader() {
           ))}
         </nav>
 
-        <div className="hidden items-center gap-3 md:flex">
+        <div className="hidden items-center gap-1 md:flex">
+          <CountrySelector />
+          <div className="mx-1 h-5 w-px bg-border" />
           {isAuthenticated ? (
             <Button asChild>
               <Link to="/dashboard">{t('landing.nav.goToApp')}</Link>
@@ -76,7 +79,11 @@ export function LandingHeader() {
                 {t(link.key)}
               </a>
             ))}
-            <div className="mt-2 flex flex-col gap-2 border-t border-border pt-3">
+            <div className="mt-2 flex items-center justify-between border-t border-border pt-3">
+              <span className="text-sm text-muted-foreground">Pays</span>
+              <CountrySelector />
+            </div>
+            <div className="flex flex-col gap-2 pt-1">
               {isAuthenticated ? (
                 <Button asChild>
                   <Link to="/dashboard">{t('landing.nav.goToApp')}</Link>
