@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft } from 'lucide-react';
+import { jsPDF } from 'jspdf';
+import { ArrowLeft, Download, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -14,6 +15,7 @@ import { useLegalSettingsQuery } from '@/hooks/usePayroll';
 import { useCurrentCompanyQuery } from '@/hooks/useCompanies';
 import { computePayrollEntry } from '@/lib/payrollEngine';
 import { formatCurrency } from '@/lib/utils';
+import { CurrencyCode, Employee, PayrollEntry } from '@/types';
 
 function VariableInput({
   label,
@@ -45,11 +47,85 @@ function PayslipLine({ label, value, strong }: { label: string; value: number; s
   );
 }
 
+// Génère le PDF du bulletin simulé — ledger à deux colonnes (libellé / montant),
+// mêmes lignes que l'aperçu à l'écran. Fonction pure (aucun hook) pour rester
+// appelable directement depuis le clic du bouton Télécharger.
+function downloadPayslipSimulationPdf(params: {
+  employee: Employee;
+  entry: PayrollEntry;
+  currencyCode: CurrencyCode | undefined;
+  companyName: string;
+  labels: {
+    documentTitle: string;
+    baseSalary: string;
+    overtimeHours: string;
+    salaireBrut: string;
+    cnssEmployee: string;
+    iuts: string;
+    avances: string;
+    retenues: string;
+    netToPay: string;
+    cnssEmployer: string;
+    employerCost: string;
+  };
+}) {
+  const { employee, entry, currencyCode, companyName, labels } = params;
+  const doc = new jsPDF();
+  const left = 14;
+  const right = 196;
+  let y = 20;
+
+  doc.setFontSize(16);
+  doc.text(companyName, left, y);
+  y += 8;
+  doc.setFontSize(11);
+  doc.setTextColor(120);
+  doc.text(labels.documentTitle, left, y);
+  y += 10;
+
+  doc.setTextColor(0);
+  doc.setFontSize(11);
+  doc.text(`${employee.firstName} ${employee.lastName}`, left, y);
+  doc.text(employee.matricule, right, y, { align: 'right' });
+  y += 10;
+
+  const line = (label: string, amount: number, bold = false) => {
+    doc.setFont('helvetica', bold ? 'bold' : 'normal');
+    doc.text(label, left, y);
+    doc.text(formatCurrency(amount, currencyCode), right, y, { align: 'right' });
+    y += 7;
+  };
+  const rule = () => {
+    y += 1;
+    doc.setDrawColor(200);
+    doc.line(left, y, right, y);
+    y += 6;
+  };
+
+  line(labels.baseSalary, entry.baseSalary);
+  entry.primes.forEach((p) => line(p.label, p.amount));
+  line(labels.overtimeHours, entry.overtimeAmount);
+  rule();
+  line(labels.salaireBrut, entry.salaireBrut, true);
+  line(labels.cnssEmployee, -entry.cnssEmployee);
+  line(labels.iuts, -entry.iuts);
+  if (entry.avances.length > 0) line(labels.avances, -entry.avances[0].amount);
+  if (entry.retenues.length > 0) line(labels.retenues, -entry.retenues[0].amount);
+  rule();
+  line(labels.netToPay, entry.salaireNet, true);
+  y += 4;
+  line(labels.cnssEmployer, entry.cnssEmployer);
+  line(labels.employerCost, entry.coutEmployeur, true);
+
+  doc.save(`bulletin-simulation-${employee.matricule}.pdf`);
+}
+
 export function LivePayslipPreviewPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { data: employeesPage, isLoading: employeesLoading } = useEmployeesQuery({ perPage: 1000 });
   const { data: legalSettingsVersions, isLoading: legalLoading } = useLegalSettingsQuery();
+  const { data: company } = useCurrentCompanyQuery();
 
   const employees = employeesPage?.data ?? [];
   const legalSettings = legalSettingsVersions?.[0];
@@ -90,6 +166,29 @@ export function LivePayslipPreviewPage() {
 
   const isLoading = employeesLoading || legalLoading;
 
+  const handleDownloadPdf = () => {
+    if (!employee || !entry) return;
+    downloadPayslipSimulationPdf({
+      employee,
+      entry,
+      currencyCode: company?.currencyCode,
+      companyName: company?.name ?? t('app.name'),
+      labels: {
+        documentTitle: t('payroll.livePreview.payslipPreview'),
+        baseSalary: t('payroll.livePreview.baseSalary'),
+        overtimeHours: t('payroll.overtimeHours'),
+        salaireBrut: t('payroll.salaireBrut'),
+        cnssEmployee: `${t('payroll.cnssEmployee')} (${legalSettings?.cnssEmployeeRate}%)`,
+        iuts: t('payroll.iuts'),
+        avances: t('payroll.avances'),
+        retenues: t('payroll.retenues'),
+        netToPay: t('payroll.livePreview.netToPay'),
+        cnssEmployer: `${t('payroll.cnssEmployer')} (${legalSettings?.cnssEmployerRate}%)`,
+        employerCost: t('payroll.livePreview.employerCost'),
+      },
+    });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -106,6 +205,21 @@ export function LivePayslipPreviewPage() {
 
       {isLoading ? (
         <Skeleton className="h-96 w-full" />
+      ) : employees.length === 0 ? (
+        // Seule vraie cause d'un aperçu vide sur cette page : les barèmes
+        // légaux sont des données de démo toujours pré-remplies
+        // (src/mocks/payroll.ts), donc `entry` ne peut être null que si
+        // l'entreprise n'a encore aucun employé — pas un bug de réactivité.
+        <Card>
+          <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
+            <p className="text-sm font-medium text-foreground">{t('payroll.livePreview.noEmployees')}</p>
+            <p className="text-sm text-muted-foreground">{t('payroll.livePreview.noEmployeesHint')}</p>
+            <Button onClick={() => navigate('/employees/new')}>
+              <UserPlus className="mr-2 h-4 w-4" />
+              {t('payroll.livePreview.addEmployeeCta')}
+            </Button>
+          </CardContent>
+        </Card>
       ) : (
         <div className="grid gap-6 lg:grid-cols-2">
           <Card>
@@ -171,6 +285,11 @@ export function LivePayslipPreviewPage() {
                   <Separator />
                   <PayslipLine label={`${t('payroll.cnssEmployer')} (${legalSettings?.cnssEmployerRate}%)`} value={entry.cnssEmployer} />
                   <PayslipLine label={t('payroll.livePreview.employerCost')} value={entry.coutEmployeur} strong />
+                  <Separator />
+                  <Button variant="outline" className="w-full" onClick={handleDownloadPdf}>
+                    <Download className="mr-2 h-4 w-4" />
+                    {t('payroll.livePreview.downloadPdf')}
+                  </Button>
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">{t('app.noData')}</p>
