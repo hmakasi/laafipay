@@ -185,6 +185,7 @@
     "prepareCycle": "Préparer le cycle",
     "validateCycle": "Valider le cycle",
     "legalSettings": "Barèmes légaux",
+    "componentsSetupCta": "Configuration du bulletin",
     "variableElements": "Éléments variables",
     "auditTrail": "Piste d'audit",
     "period": "Période",
@@ -217,7 +218,77 @@
       "payslipPreview": "Bulletin (simulation)",
       "baseSalary": "Salaire de base",
       "netToPay": "Net à payer",
-      "employerCost": "Coût employeur total"
+      "employerCost": "Coût employeur total",
+      "downloadPdf": "Télécharger le PDF",
+      "noEmployees": "Aucun employé pour le moment.",
+      "noEmployeesHint": "Ajoutez un employé pour lancer une simulation de bulletin.",
+      "addEmployeeCta": "Ajouter un employé"
+    },
+    "componentsSetup": {
+      "title": "Personnalisation de vos bulletins de paie",
+      "subtitle": "Sélectionnez les primes, indemnités et cotisations applicables au sein de votre structure.",
+      "mandatorySection": {
+        "title": "Éléments obligatoires",
+        "description": "Ces rubriques légales s'appliquent à tous les bulletins et ne peuvent pas être désactivées.",
+        "badge": "Obligatoire"
+      },
+      "mandatoryRubrics": {
+        "baseSalary": "Salaire de base",
+        "cnss": "CNSS",
+        "its": "ITS (Impôt sur les Traitements et Salaires)"
+      },
+      "optionalSection": {
+        "title": "Avantages & primes optionnels",
+        "description": "Activez uniquement les rubriques réellement utilisées par votre entreprise."
+      },
+      "categories": {
+        "housing": {
+          "title": "Logement & cadre de vie",
+          "rubrics": { "housingAllowance": "Indemnité de logement / loyer" }
+        },
+        "health": {
+          "title": "Santé & protection",
+          "rubrics": { "healthInsurance": "Assurance santé d'entreprise" }
+        },
+        "mobility": {
+          "title": "Mobilité & déplacement",
+          "rubrics": { "transportAllowance": "Indemnité de transport" }
+        },
+        "performance": {
+          "title": "Performance & autres",
+          "rubrics": {
+            "performanceBonus": "Prime de rendement",
+            "thirteenthMonth": "13ème mois",
+            "benefitsInKind": "Avantages en nature"
+          }
+        }
+      },
+      "healthInsuranceHint": "Part employeur et part salariale",
+      "customSection": {
+        "title": "Rubrique sur-mesure",
+        "description": "Ajoutez une rubrique propre à votre entreprise si elle ne figure pas dans la liste ci-dessus.",
+        "addButton": "Ajouter une rubrique personnalisée",
+        "empty": "Aucune rubrique personnalisée pour le moment.",
+        "taxableYes": "Imposable",
+        "taxableNo": "Non imposable",
+        "cnssYes": "Cotisable CNSS",
+        "cnssNo": "Non cotisable CNSS",
+        "remove": "Retirer"
+      },
+      "customDialog": {
+        "title": "Nouvelle rubrique personnalisée",
+        "description": "Cette rubrique s'ajoutera à celles envoyées avec votre configuration de paie.",
+        "labelField": "Nom de la rubrique",
+        "labelPlaceholder": "Ex. Prime d'ancienneté",
+        "taxable": "Imposable",
+        "cnssContributable": "Cotisable CNSS",
+        "cancel": "Annuler",
+        "submit": "Ajouter la rubrique"
+      },
+      "save": "Enregistrer la configuration",
+      "saving": "Enregistrement...",
+      "saveSuccess": "Configuration de paie enregistrée",
+      "saveError": "Erreur lors de l'enregistrement"
     }
   },
   "payments": {

@@ -14,6 +14,7 @@ import { EmployeeFormPage } from '@/pages/employees/EmployeeFormPage';
 import { PayrollCyclesPage } from '@/pages/payroll/PayrollCyclesPage';
 import { PayrollCycleDetailPage } from '@/pages/payroll/PayrollCycleDetailPage';
 import { LegalSettingsPage } from '@/pages/payroll/LegalSettingsPage';
+import { PayrollComponentsSetup } from '@/pages/payroll/PayrollComponentsSetup';
 import { LivePayslipPreviewPage } from '@/pages/payroll/LivePayslipPreviewPage';
 import { PaymentsListPage } from '@/pages/payments/PaymentsListPage';
 import { PaymentOrderDetailPage } from '@/pages/payments/PaymentOrderDetailPage';
@@ -89,6 +90,14 @@ export function AppRouter() {
               element={
                 <RequirePermission permission="settings:write">
                   <LegalSettingsPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="payroll/settings"
+              element={
+                <RequirePermission permission="settings:write">
+                  <PayrollComponentsSetup />
                 </RequirePermission>
               }
             />

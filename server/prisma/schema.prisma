@@ -116,9 +116,25 @@ model Company {
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 
-  users       User[]
-  employees   Employee[]
-  departments Department[]
+  users         User[]
+  employees     Employee[]
+  departments   Department[]
+  payrollConfig PayrollConfig?
+}
+
+// Rubriques de bulletin activées par l'entreprise (PayrollComponentsSetup.tsx).
+// activeRubrics : identifiants du catalogue (obligatoires + optionnelles
+// cochées). customRubrics : rubriques sur-mesure, en objets car elles portent
+// des champs propres (taxable, cnssContributable) qu'un simple string ne
+// peut pas porter — voir server/src/routes/companies.routes.ts.
+model PayrollConfig {
+  id            String   @id @default(cuid())
+  companyId     String   @unique
+  company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  activeRubrics Json
+  customRubrics Json
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 model User {

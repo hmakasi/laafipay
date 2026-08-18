@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Plus, Scale, Sparkles } from 'lucide-react';
+import { Plus, Scale, Settings, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -56,6 +56,12 @@ export function PayrollCyclesPage() {
           <p className="text-sm text-muted-foreground">{t('payroll.cycles')}</p>
         </div>
         <div className="flex gap-2">
+          <PermissionGate permission="settings:write">
+            <Button variant="outline" onClick={() => navigate('/payroll/settings')}>
+              <Settings className="mr-2 h-4 w-4" />
+              {t('payroll.componentsSetupCta')}
+            </Button>
+          </PermissionGate>
           <PermissionGate permission="payroll:write">
             <Button variant="outline" onClick={() => navigate('/payroll/apercu-direct')}>
               <Sparkles className="mr-2 h-4 w-4" />

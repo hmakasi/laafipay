@@ -152,3 +152,45 @@ companiesRouter.patch(
     res.json(toCompanyDTO(company));
   })
 );
+
+// Rubriques de bulletin (PayrollComponentsSetup.tsx).
+const customRubricSchema = z.object({
+  label: z.string().min(1),
+  taxable: z.boolean(),
+  cnssContributable: z.boolean(),
+});
+
+const payrollConfigSchema = z.object({
+  activeRubrics: z.array(z.string()),
+  customRubrics: z.array(customRubricSchema),
+});
+
+const EMPTY_PAYROLL_CONFIG = { activeRubrics: [] as string[], customRubrics: [] as unknown[] };
+
+companiesRouter.get(
+  '/payroll-config',
+  authenticate,
+  // Comme /me : lecture ouverte à tous les rôles authentifiés, ce n'est
+  // qu'un réglage d'affichage des bulletins, pas une donnée sensible.
+  asyncHandler(async (req, res) => {
+    const config = await prisma.payrollConfig.findUnique({ where: { companyId: req.user!.companyId } });
+    res.json(
+      config ? { activeRubrics: config.activeRubrics, customRubrics: config.customRubrics } : EMPTY_PAYROLL_CONFIG
+    );
+  })
+);
+
+companiesRouter.put(
+  '/payroll-config',
+  authenticate,
+  authorize('settings:write'),
+  asyncHandler(async (req, res) => {
+    const data = payrollConfigSchema.parse(req.body);
+    const config = await prisma.payrollConfig.upsert({
+      where: { companyId: req.user!.companyId },
+      create: { companyId: req.user!.companyId, ...data },
+      update: data,
+    });
+    res.json({ activeRubrics: config.activeRubrics, customRubrics: config.customRubrics });
+  })
+);
