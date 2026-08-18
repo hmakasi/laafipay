@@ -506,6 +506,17 @@
         "description": "Lancez vos cycles de paie, générez les bulletins et suivez les paiements en quelques clics."
       }
     },
+    "valueProps": {
+      "title": "Avancer en toute confiance",
+      "compliance": {
+        "title": "Une conformité garantie de bout en bout",
+        "description": "Les entreprises choisissent leur niveau d'implication. Nos experts gèrent votre paie et prennent en charge la conformité fiscale et sociale (CNSS, IUTS, IPR, INPP) de A à Z. Un niveau d'engagement et de sérénité unique sur le marché."
+      },
+      "hrManagement": {
+        "title": "Un accompagnement de l'embauche au départ",
+        "description": "Du recrutement à l'onboarding, de la gestion des absences aux contrats et reportings, LaafiPay centralise toutes vos opérations RH dans une interface unique adaptée aux réalités africaines."
+      }
+    },
     "pricing": {
       "title": "Une offre adaptée à votre taille",
       "subtitle": "Changez de formule à tout moment selon la croissance de votre entreprise.",
@@ -546,8 +557,17 @@
     },
     "about": {
       "title": "LaafiPay, la paie et les RH adaptées à l'Afrique",
-      "description": "LaafiPay est la plateforme de gestion de la paie et des RH pensée pour les entreprises d'Afrique. Elle automatise vos processus en s'adaptant exactement aux spécificités fiscales, sociales et de paiement de chaque pays (<1>IUTS</1>, <2>IRPP</2>, <3>IPR</3>, <4>CNSS</4>, <5>Mobile Money</5>).",
-      "complianceBadges": ["Zone OHADA", "UEMOA", "RDC"]
+      "vision": {
+        "kicker": "Notre engagement",
+        "title": "Valoriser chaque talent, faciliter l'inclusion bancaire",
+        "description": "En Afrique, l'absence de bulletin de paie reste un fléau. Pourtant, ce document est bien plus qu'un simple chiffrage : c'est la preuve de la reconnaissance d'un employeur et la trace financière du parcours d'un talent. Un bulletin structuré offre aux collaborateurs la clé de l'inclusion bancaire. Nous avons créé LaafiPay pour que chaque entreprise africaine dispose d'un système Paie & RH adapté et 100 % conforme."
+      },
+      "founder": {
+        "kicker": "Le mot de la fondatrice",
+        "badge": "Master en RH & Experte Paie",
+        "title": "L'expertise métier au service du continent",
+        "description": "Après plusieurs expériences sans jamais recevoir de bulletin de paie, c'est en exerçant dans les RH en France que j'ai réalisé l'impact de ce décalage. Fortement ancrée sur le terrain en administration du personnel et gestion de la paie, j'ai voulu mettre cette légitimité métier au service de notre continent en bâtissant LaafiPay de zéro."
+      }
     },
     "contact": {
       "title": "Une question ?",
