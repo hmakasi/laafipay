@@ -545,8 +545,9 @@
       }
     },
     "about": {
-      "title": "À propos de LaafiPay",
-      "description": "LaafiPay est une plateforme de gestion de la paie et des ressources humaines conçue pour les entreprises du Burkina Faso, tenant compte des spécificités locales : IUTS, CNSS, mobile money."
+      "title": "LaafiPay, la paie et les RH adaptées à l'Afrique",
+      "description": "LaafiPay est la plateforme de gestion de la paie et des RH pensée pour les entreprises d'Afrique. Elle automatise vos processus en s'adaptant exactement aux spécificités fiscales, sociales et de paiement de chaque pays (<1>IUTS</1>, <2>IRPP</2>, <3>IPR</3>, <4>CNSS</4>, <5>Mobile Money</5>).",
+      "complianceBadges": ["Zone OHADA", "UEMOA", "RDC"]
     },
     "contact": {
       "title": "Une question ?",
