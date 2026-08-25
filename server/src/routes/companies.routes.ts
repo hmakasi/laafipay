@@ -75,24 +75,7 @@ const signupSchema = z
     path: ['currencyCode'],
   });
 
-function toCompanyDTO(c: {
-  id: string;
-  name: string;
-  legalName: string | null;
-  ifu: string | null;
-  rccm: string | null;
-  address: string | null;
-  postalCode: string | null;
-  city: string | null;
-  activityCode: string | null;
-  collectiveAgreement: string | null;
-  countryCode: string;
-  currencyCode: string;
-  phone: string | null;
-  email: string | null;
-  cnssNumber: string | null;
-  logo: string | null;
-}) {
+function toCompanyDTO(c: any) {
   return {
     id: c.id,
     name: c.name,
@@ -255,14 +238,18 @@ companiesRouter.put(
   authorize('settings:write'),
   asyncHandler(async (req, res) => {
     const data = payrollConfigSchema.parse(req.body);
+    const companyId = req.user!.companyId;
     const config = await prisma.payrollConfig.upsert({
-      where: { companyId: req.user!.companyId },
+      where: { companyId },
       create: {
-        company: { connect: { id: req.user!.companyId } },
+        companyId,
         activeRubrics: data.activeRubrics,
-        customRubrics: data.customRubrics,
+        customRubrics: data.customRubrics as any,
       },
-      update: data,
+      update: {
+        activeRubrics: data.activeRubrics,
+        customRubrics: data.customRubrics as any,
+      },
     });
     res.json({ activeRubrics: config.activeRubrics, customRubrics: config.customRubrics });
   })
