@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "vite",
     "dev:all": "concurrently \"npm run dev\" \"npm --prefix server run dev\"",
-    "build": "tsc -b && vite build",
+    "build": "prisma generate --schema=server/prisma/schema.prisma && tsc -b && vite build",
     "postinstall": "prisma generate --schema=server/prisma/schema.prisma",
     "lint": "oxlint",
     "preview": "vite preview"
