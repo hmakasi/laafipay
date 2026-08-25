@@ -34,6 +34,10 @@ export async function createLegalSettings(data: Omit<LegalSettings, 'id' | 'crea
   return apiClient.post<LegalSettings>('/payroll/legal-settings', data);
 }
 
+export async function deleteLegalSettings(id: string): Promise<void> {
+  return apiClient.delete<void>(`/payroll/legal-settings/${id}`);
+}
+
 export async function getAuditTrail(cycleId: string) {
   return apiClient.get(`/payroll/cycles/${cycleId}/audit-trail`);
 }

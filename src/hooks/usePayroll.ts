@@ -4,6 +4,7 @@ import { PayrollEntryInput } from '@/lib/payrollEngine';
 import {
   createLegalSettings,
   createPayrollCycle,
+  deleteLegalSettings,
   getAuditTrail,
   getLegalSettings,
   getPayrollCycle,
@@ -71,6 +72,16 @@ export function useCreateLegalSettingsMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: Omit<LegalSettings, 'id' | 'createdAt'>) => createLegalSettings(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['legal-settings'] });
+    },
+  });
+}
+
+export function useDeleteLegalSettingsMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => deleteLegalSettings(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['legal-settings'] });
     },

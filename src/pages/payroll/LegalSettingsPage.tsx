@@ -12,9 +12,21 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { PermissionGate } from '@/components/auth/PermissionGate';
 import { useAuthStore } from '@/store/authStore';
-import { useCreateLegalSettingsMutation, useLegalSettingsQuery } from '@/hooks/usePayroll';
+import { useCreateLegalSettingsMutation, useDeleteLegalSettingsMutation, useLegalSettingsQuery } from '@/hooks/usePayroll';
 import { useCurrentCompanyQuery } from '@/hooks/useCompanies';
 import { formatCurrency, formatDate } from '@/lib/utils';
 
@@ -43,7 +55,20 @@ export function LegalSettingsPage() {
   const { data: company } = useCurrentCompanyQuery();
   const currencyCode = company?.currencyCode;
   const createMutation = useCreateLegalSettingsMutation();
+  const deleteMutation = useDeleteLegalSettingsMutation();
   const [open, setOpen] = useState(false);
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteMutation.mutateAsync(id);
+      toast.success(t('app.delete'));
+    } catch (err) {
+      // Le serveur refuse (409) si le barème a déjà servi à un cycle —
+      // sans ce catch, ce message explicite (et le seul indice de la
+      // raison du refus) disparaissait silencieusement.
+      toast.error(err instanceof Error ? err.message : 'Erreur lors de la suppression du barème');
+    }
+  };
 
   const current = settings?.[0];
 
@@ -204,6 +229,7 @@ export function LegalSettingsPage() {
                   <TableHead>{t('payroll.cnssEmployer')}</TableHead>
                   <TableHead>Tranches IUTS</TableHead>
                   <TableHead>Créé par</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -215,6 +241,30 @@ export function LegalSettingsPage() {
                     <TableCell>{s.cnssEmployerRate}%</TableCell>
                     <TableCell>{s.iutsBrackets.length}</TableCell>
                     <TableCell className="text-muted-foreground">{s.createdBy}</TableCell>
+                    <TableCell className="text-right">
+                      <PermissionGate permission="payroll:settings">
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" disabled={deleteMutation.isPending}>
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>{t('app.confirm')}</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Supprimer le barème du {formatDate(s.effectiveDate)} ? Impossible s'il a déjà servi à un
+                                cycle de paie.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>{t('app.cancel')}</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDelete(s.id)}>{t('app.confirm')}</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </PermissionGate>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

@@ -383,6 +383,33 @@ payrollRouter.post(
   })
 );
 
+// Pas de suppression si le barème a déjà servi à un cycle : PayrollCycle.
+// legalSettingsId est figé à la création du cycle précisément pour qu'un
+// changement de barème ultérieur ne modifie jamais rétroactivement un
+// cycle déjà calculé (voir syncEntries plus haut) — le supprimer casserait
+// cette référence. Seule une erreur de saisie jamais utilisée peut être
+// retirée.
+payrollRouter.delete(
+  '/legal-settings/:id',
+  authorize('payroll:settings'),
+  asyncHandler(async (req, res) => {
+    const companyId = req.user!.companyId;
+    const settings = await prisma.legalSettings.findFirst({ where: { id: req.params.id, companyId } });
+    if (!settings) throw new NotFoundError(`Barème ${req.params.id} introuvable`);
+
+    const usageCount = await prisma.payrollCycle.count({ where: { legalSettingsId: settings.id } });
+    if (usageCount > 0) {
+      throw new HttpError(
+        409,
+        `Ce barème a déjà été utilisé par ${usageCount} cycle${usageCount > 1 ? 's' : ''} de paie et ne peut plus être supprimé.`
+      );
+    }
+
+    await prisma.legalSettings.delete({ where: { id: settings.id } });
+    res.status(204).send();
+  })
+);
+
 // ── Audit trail (dérivé, aucun journal dédié — endpoint non consommé par l'UI actuelle) ──
 
 payrollRouter.get(
