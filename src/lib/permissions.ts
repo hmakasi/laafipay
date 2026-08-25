@@ -23,6 +23,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'leaves:write',
     'leaves:approve',
     'leaves:read_team',
+    'reviews:read',
+    'reviews:write',
+    'reviews:manage_team',
     'reports:read',
     'reports:export',
     'users:read',
@@ -33,6 +36,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'self:payslips',
     'self:leaves',
     'self:profile',
+    'self:reviews',
   ],
 
   hr_manager: [
@@ -50,11 +54,15 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'leaves:write',
     'leaves:approve',
     'leaves:read_team',
+    'reviews:read',
+    'reviews:write',
+    'reviews:manage_team',
     'reports:read',
     'reports:export',
     'self:payslips',
     'self:leaves',
     'self:profile',
+    'self:reviews',
   ],
 
   manager: [
@@ -62,10 +70,12 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'leaves:read',
     'leaves:approve',
     'leaves:read_team',
+    'reviews:manage_team',
     'reports:read',
     'self:payslips',
     'self:leaves',
     'self:profile',
+    'self:reviews',
   ],
 
   accountant: [
@@ -80,12 +90,14 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'self:payslips',
     'self:leaves',
     'self:profile',
+    'self:reviews',
   ],
 
   employee: [
     'self:payslips',
     'self:leaves',
     'self:profile',
+    'self:reviews',
   ],
 };
 
@@ -101,6 +113,7 @@ export const ROLE_NAV_ITEMS: Record<UserRole, string[]> = {
     'payments',
     'payslips',
     'leaves',
+    'reviews',
     'reports',
     'users',
     'settings',
@@ -113,12 +126,14 @@ export const ROLE_NAV_ITEMS: Record<UserRole, string[]> = {
     'payments',
     'payslips',
     'leaves',
+    'reviews',
     'reports',
   ],
   manager: [
     'dashboard',
     'employees',
     'leaves',
+    'reviews',
     'self',
   ],
   accountant: [

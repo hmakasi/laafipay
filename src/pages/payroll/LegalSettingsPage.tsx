@@ -49,6 +49,10 @@ export function LegalSettingsPage() {
 
   const form = useForm<LegalSettingsFormValues>({
     resolver: zodResolver(legalSettingsSchema),
+    // Une tranche vide par défaut : sans elle, une première entreprise (sans
+    // barème existant) ouvrait le dialogue avec 0 tranche et devait deviner
+    // qu'il fallait cliquer "Ajouter une tranche" avant de pouvoir enregistrer.
+    defaultValues: { effectiveDate: '', smig: 0, cnssEmployeeRate: 0, cnssEmployerRate: 0, iutsBrackets: [{ min: 0, max: null, rate: 0, deduction: 0 }] },
     values: current
       ? {
           effectiveDate: new Date().toISOString().split('T')[0],
@@ -64,9 +68,16 @@ export function LegalSettingsPage() {
 
   const onSubmit = async (values: LegalSettingsFormValues) => {
     if (!user) return;
-    await createMutation.mutateAsync({ ...values, createdBy: user.email });
-    toast.success(t('app.save'));
-    setOpen(false);
+    try {
+      await createMutation.mutateAsync({ ...values, createdBy: user.email });
+      toast.success(t('app.save'));
+      setOpen(false);
+    } catch (err) {
+      // Sans ce catch, un rejet (ex. 403 "Permission refusée" pour un rôle
+      // sans payroll:settings, ou une erreur de validation) ne remontait
+      // nulle part : le clic sur Enregistrer semblait ne rien faire.
+      toast.error(err instanceof Error ? err.message : 'Erreur lors de l\'enregistrement du barème légal');
+    }
   };
 
   return (
@@ -121,7 +132,7 @@ export function LegalSettingsPage() {
                     {fields.map((field, index) => (
                       <div key={field.id} className="grid grid-cols-5 items-end gap-2">
                         <FormField control={form.control} name={`iutsBrackets.${index}.min`} render={({ field }) => (
-                          <FormItem><FormLabel className="text-xs">Min</FormLabel><FormControl><Input type="number" {...field} /></FormControl></FormItem>
+                          <FormItem><FormLabel className="text-xs">Min</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
                         <FormField control={form.control} name={`iutsBrackets.${index}.max`} render={({ field }) => (
                           <FormItem>
@@ -133,13 +144,14 @@ export function LegalSettingsPage() {
                                 onChange={(e) => field.onChange(e.target.value === '' ? null : Number(e.target.value))}
                               />
                             </FormControl>
+                            <FormMessage />
                           </FormItem>
                         )} />
                         <FormField control={form.control} name={`iutsBrackets.${index}.rate`} render={({ field }) => (
-                          <FormItem><FormLabel className="text-xs">Taux %</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl></FormItem>
+                          <FormItem><FormLabel className="text-xs">Taux %</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
                         <FormField control={form.control} name={`iutsBrackets.${index}.deduction`} render={({ field }) => (
-                          <FormItem><FormLabel className="text-xs">Abattement</FormLabel><FormControl><Input type="number" {...field} /></FormControl></FormItem>
+                          <FormItem><FormLabel className="text-xs">Abattement</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
                         <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
                           <Trash2 className="h-4 w-4" />
@@ -147,6 +159,21 @@ export function LegalSettingsPage() {
                       </div>
                     ))}
                   </div>
+                  {/* Erreur "au moins une tranche requise" (z.array().min(1)) —
+                     sans ce message, un clic sur Enregistrer sans avoir jamais
+                     cliqué "Ajouter une tranche" échouait la validation côté
+                     client en silence : le bouton semblait ne rien faire, la
+                     requête n'était même pas envoyée au serveur. */}
+                  {form.formState.errors.iutsBrackets?.message && (
+                    <p className="mt-2 text-sm font-medium text-destructive">
+                      {form.formState.errors.iutsBrackets.message as string}
+                    </p>
+                  )}
+                  {fields.length === 0 && (
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      Ajoutez au moins une tranche d'imposition avant d'enregistrer.
+                    </p>
+                  )}
                 </div>
 
                 <DialogFooter>

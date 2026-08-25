@@ -62,6 +62,21 @@
     --input: 217.2 32.6% 17.5%;
     --ring: 142.4 71.8% 29.2%;
   }
+
+  /* Thème LaafiCompta — même système de tokens que LaafiPay, teinte bleu
+     "SYSCOHADA" à la place du vert RH, pour que les deux dashboards se
+     distinguent visuellement sans dupliquer les composants ui/. Portée
+     sur le wrapper du layout Compta uniquement (voir ComptaLayout). */
+  .workspace-compta {
+    --primary: 217 91% 45%;          /* #1a56db — Bleu comptabilité */
+    --primary-foreground: 0 0% 100%;
+    --ring: 217 91% 45%;
+    --brand-accent: 199 89% 48%;     /* #0ea5e9 — Cyan complémentaire */
+    --brand-accent-foreground: 0 0% 100%;
+    --sidebar-primary: 217 91% 45%;
+    --sidebar-accent: 217 47% 20%;
+    --sidebar-ring: 217 91% 45%;
+  }
 }
 
 @layer base {
@@ -128,5 +143,25 @@
   /* Sidebar active state */
   .sidebar-active {
     @apply bg-sidebar-accent text-white font-medium;
+  }
+}
+
+/* Impression d'un seul élément (ex. PayslipOfficialTemplate) : masque tout
+   le reste de l'app (sidebar, topbar, boutons...) — donner l'id
+   "print-area" au conteneur à imprimer. Hors @layer volontairement : ces
+   règles doivent s'appliquer telles quelles, sans réordonnancement Tailwind. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #print-area,
+  #print-area * {
+    visibility: visible;
+  }
+  #print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
   }
 }

@@ -76,6 +76,23 @@ enum CareerEventType {
   augmentation
   avertissement
   fin_essai
+  nouveau_contrat
+  avenant
+}
+
+enum ContractStatus {
+  actif
+  termine
+  rompu
+}
+
+enum AmendmentType {
+  renouvellement
+  changement_poste
+  changement_salaire
+  changement_departement
+  prolongation
+  autre
 }
 
 enum EmployeeInviteStatus {
@@ -99,27 +116,148 @@ enum CurrencyCode {
   USD
 }
 
-model Company {
-  id           String       @id @default(cuid())
-  name         String
-  legalName    String?
-  ifu          String?
-  rccm         String?
-  address      String?
-  city         String?
-  countryCode  CountryCode
-  currencyCode CurrencyCode
-  phone        String?
-  email        String?
-  cnssNumber   String?
-  logo         String?
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+enum PayrollCycleStatus {
+  brouillon
+  en_cours
+  valide
+  paye
+  archive
+}
 
-  users         User[]
-  employees     Employee[]
-  departments   Department[]
-  payrollConfig PayrollConfig?
+enum PayrollEntryStatus {
+  brouillon
+  valide
+}
+
+enum PayslipSendStatus {
+  non_envoye
+  envoye
+  lu
+  echoue
+}
+
+enum LeaveType {
+  conge_paye
+  maladie
+  sans_solde
+  evenement_familial
+  maternite
+  paternite
+  recuperation
+}
+
+enum LeaveStatus {
+  en_attente
+  valide
+  refuse
+  annule
+}
+
+enum LeaveChannel {
+  portail
+  whatsapp
+}
+
+enum ReviewCycleStatus {
+  brouillon
+  ouvert
+  cloture
+}
+
+enum ReviewStatus {
+  planifie
+  en_cours
+  termine
+}
+
+enum ComptaOutboxStatus {
+  en_attente
+  envoye
+  echec
+}
+
+enum ComptaJournalCode {
+  OD
+  AC
+}
+
+enum PaymentStatus {
+  en_attente
+  en_cours
+  reussi
+  echoue
+  annule
+}
+
+enum PaymentOrderType {
+  mobile_money
+  virement
+  especes
+}
+
+enum TreasuryAccountKind {
+  banque
+  mobile_money
+}
+
+// Distinct de MobileMoneyOperator (orange/moov/telecel — canal de
+// versement salarial, voir Employee) : la trésorerie LaafiCompta couvre
+// des comptes multi-pays, d'où un jeu de valeurs plus large.
+enum TreasuryMobileMoneyProvider {
+  orange_money
+  wave
+  moov_money
+  mtn_money
+  m_pesa
+}
+
+enum TreasuryTransactionSens {
+  encaissement
+  decaissement
+}
+
+enum ReconciliationStatus {
+  en_attente
+  rapproche
+  anomalie
+}
+
+model Company {
+  id                  String       @id @default(cuid())
+  name                String
+  legalName           String?
+  ifu                 String? // NIF/IFU/ID.NAT — exposé en taxIdNumber côté API (voir toCompanyDTO)
+  rccm                String?
+  address             String?
+  postalCode          String?
+  city                String?
+  activityCode        String? // Code APE / secteur d'activité
+  collectiveAgreement String? // Convention collective applicable
+  countryCode         CountryCode
+  currencyCode        CurrencyCode
+  phone               String?
+  email               String?
+  cnssNumber          String? // N° immatriculation employeur — exposé en socialSecurityNumber côté API
+  logo                String?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  users                User[]
+  employees            Employee[]
+  departments          Department[]
+  payrollConfig        PayrollConfig?
+  legalSettings        LegalSettings[]
+  payrollCycles        PayrollCycle[]
+  payslips             Payslip[]
+  leaveRequests        LeaveRequest[]
+  leaveBalances        LeaveBalance[]
+  reviewCycles         ReviewCycle[]
+  performanceReviews   PerformanceReview[]
+  comptaOutboxEvents   ComptaOutboxEvent[]
+  comptaJournalEntries ComptaJournalEntry[]
+  paymentOrders        PaymentOrder[]
+  treasuryAccounts     TreasuryAccount[]
+  treasuryTransactions TreasuryTransaction[]
 }
 
 // Rubriques de bulletin activées par l'entreprise (PayrollComponentsSetup.tsx).
@@ -156,25 +294,26 @@ model User {
 }
 
 model Department {
-  id        String      @id @default(cuid())
+  id        String       @id @default(cuid())
   companyId String
-  company   Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company   Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
   name      String
   code      String
   managerId String?
-  manager   Employee?   @relation("DepartmentManager", fields: [managerId], references: [id], onDelete: SetNull)
+  manager   Employee?    @relation("DepartmentManager", fields: [managerId], references: [id], onDelete: SetNull)
   parentId  String?
-  parent    Department? @relation("DepartmentHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  parent    Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
   children  Department[] @relation("DepartmentHierarchy")
-  employees Employee[]  @relation("EmployeeDepartment")
+  employees Employee[]   @relation("EmployeeDepartment")
+  contracts Contract[]
 
   @@unique([companyId, code])
 }
 
 model Employee {
-  id               String         @id @default(cuid())
+  id               String        @id @default(cuid())
   companyId        String
-  company          Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company          Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
   matricule        String
   firstName        String
   lastName         String
@@ -183,35 +322,35 @@ model Employee {
   placeOfBirth     String
   nationality      String
   maritalStatus    MaritalStatus
-  numberOfChildren Int            @default(0)
+  numberOfChildren Int           @default(0)
   email            String
   phone            String
   address          String
   city             String
 
-  contractType     ContractType
-  status           EmployeeStatus @default(periode_essai)
-  hireDate         DateTime
-  trialEndDate     DateTime?
-  contractEndDate  DateTime?
+  contractType    ContractType
+  status          EmployeeStatus @default(periode_essai)
+  hireDate        DateTime
+  trialEndDate    DateTime?
+  contractEndDate DateTime?
 
-  position         String
-  departmentId     String
-  department       Department     @relation("EmployeeDepartment", fields: [departmentId], references: [id])
-  managerId        String?
-  manager          Employee?      @relation("EmployeeManager", fields: [managerId], references: [id], onDelete: SetNull)
-  reports          Employee[]     @relation("EmployeeManager")
-  siteLocation     String
+  position     String
+  departmentId String
+  department   Department @relation("EmployeeDepartment", fields: [departmentId], references: [id])
+  managerId    String?
+  manager      Employee?  @relation("EmployeeManager", fields: [managerId], references: [id], onDelete: SetNull)
+  reports      Employee[] @relation("EmployeeManager")
+  siteLocation String
 
   baseSalary          Float
-  paymentMethod        PaymentMethod
-  mobileMoneyOperator  MobileMoneyOperator?
-  mobileMoneyNumber    String?
-  mobileMoneyAccount   String?
-  bankName             String?
-  bankIban             String?
-  bankRib              String?
-  bankAccountHolder    String?
+  paymentMethod       PaymentMethod
+  mobileMoneyOperator MobileMoneyOperator?
+  mobileMoneyNumber   String?
+  mobileMoneyAccount  String?
+  bankName            String?
+  bankIban            String?
+  bankRib             String?
+  bankAccountHolder   String?
 
   cnssNumber   String?
   iutsCategory Int     @default(1)
@@ -221,18 +360,25 @@ model Employee {
   inviteToken  String?              @unique
   inviteStatus EmployeeInviteStatus @default(not_invited)
 
-  contractSigned      Boolean @default(false)
-  cnssRegistered      Boolean @default(false)
-  equipmentProvided   Boolean @default(false)
-  accessGranted       Boolean @default(false)
-  trainingCompleted   Boolean @default(false)
-  bankInfoProvided    Boolean @default(false)
-  photoTaken          Boolean @default(false)
+  contractSigned    Boolean @default(false)
+  cnssRegistered    Boolean @default(false)
+  equipmentProvided Boolean @default(false)
+  accessGranted     Boolean @default(false)
+  trainingCompleted Boolean @default(false)
+  bankInfoProvided  Boolean @default(false)
+  photoTaken        Boolean @default(false)
 
-  documents      EmployeeDocument[]
-  careerHistory  CareerEvent[]
-  managedDepartments Department[] @relation("DepartmentManager")
-  user           User?
+  documents           EmployeeDocument[]
+  careerHistory       CareerEvent[]
+  managedDepartments  Department[]         @relation("DepartmentManager")
+  user                User?
+  payrollEntries      PayrollEntry[]
+  payslips            Payslip[]
+  contracts           Contract[]
+  leaveRequests       LeaveRequest[]
+  leaveBalances       LeaveBalance[]
+  performanceReviews  PerformanceReview[]
+  paymentTransactions PaymentTransaction[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -262,4 +408,391 @@ model CareerEvent {
   previousValue String?
   newValue      String?
   changedBy     String
+}
+
+// Un employé peut avoir plusieurs contrats successifs (CDD renouvelé, passage
+// CDI...). Un seul contrat est "courant" (isCurrent) à la fois ; ses champs
+// sont répercutés en instantané sur Employee (contractType/position/...) pour
+// que le reste de l'app (paie, listes, dashboard) continue de lire Employee
+// sans changement. Employee.hireDate n'est jamais modifié par un nouveau
+// contrat — c'est la date d'entrée dans l'entreprise, immuable.
+model Contract {
+  id             String              @id @default(cuid())
+  employeeId     String
+  employee       Employee            @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  contractNumber String?
+  contractType   ContractType
+  startDate      DateTime
+  endDate        DateTime?
+  trialEndDate   DateTime?
+  position       String
+  departmentId   String
+  department     Department          @relation(fields: [departmentId], references: [id])
+  baseSalary     Float
+  status         ContractStatus      @default(actif)
+  isCurrent      Boolean             @default(true)
+  notes          String?
+  createdBy      String
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  amendments     ContractAmendment[]
+}
+
+// Modifie en place les termes du contrat courant (c'est le sens juridique
+// réel d'un avenant) — contrairement à un nouveau Contract, qui clôt
+// l'ancien. previousValue/newValue capturent le changement pour l'historique.
+model ContractAmendment {
+  id            String        @id @default(cuid())
+  contractId    String
+  contract      Contract      @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  type          AmendmentType
+  effectiveDate DateTime
+  description   String
+  previousValue String?
+  newValue      String?
+  createdBy     String
+  createdAt     DateTime      @default(now())
+}
+
+// Barème CNSS/IUTS en vigueur pour une entreprise à une date donnée. Un
+// PayrollCycle fige la LegalSettings applicable à sa création (voir
+// PayrollCycle.legalSettingsId) pour que les calculs d'un cycle ne dérivent
+// jamais si un nouveau barème est créé après coup.
+model LegalSettings {
+  id               String         @id @default(cuid())
+  companyId        String
+  company          Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  effectiveDate    DateTime
+  smig             Float
+  cnssEmployeeRate Float
+  cnssEmployerRate Float
+  iutsBrackets     Json
+  createdBy        String
+  createdAt        DateTime       @default(now())
+  payrollCycles    PayrollCycle[]
+}
+
+model PayrollCycle {
+  id                String             @id @default(cuid())
+  companyId         String
+  company           Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  period            String
+  month             Int
+  year              Int
+  status            PayrollCycleStatus @default(brouillon)
+  legalSettingsId   String
+  legalSettings     LegalSettings      @relation(fields: [legalSettingsId], references: [id])
+  createdAt         DateTime           @default(now())
+  validatedAt       DateTime?
+  validatedBy       String?
+  entries           PayrollEntry[]
+  payslips          Payslip[]
+  comptaOutboxEvent ComptaOutboxEvent?
+  paymentOrders     PaymentOrder[]
+
+  @@unique([companyId, period])
+}
+
+model PayrollEntry {
+  id             String             @id @default(cuid())
+  cycleId        String
+  cycle          PayrollCycle       @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  employeeId     String
+  employee       Employee           @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  baseSalary     Float
+  overtimeHours  Float              @default(0)
+  overtimeAmount Float              @default(0)
+  primes         Json
+  indemnites     Json
+  avances        Json
+  retenues       Json
+  absenceDays    Float              @default(0)
+  absenceAmount  Float              @default(0)
+  salaireBrut    Float
+  cnssEmployee   Float
+  cnssEmployer   Float
+  iuts           Float
+  salaireNet     Float
+  coutEmployeur  Float
+  status         PayrollEntryStatus @default(brouillon)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  @@unique([cycleId, employeeId])
+}
+
+// Copie figée des montants d'un PayrollEntry au moment de la génération —
+// pas de recalcul : la ligne de paie du cycle reste la source de vérité,
+// le bulletin n'est qu'une "photo" destinée à être consultée/envoyée.
+model Payslip {
+  id             String            @id @default(cuid())
+  companyId      String
+  company        Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  cycleId        String
+  cycle          PayrollCycle      @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  employeeId     String
+  employee       Employee          @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  period         String
+  generatedAt    DateTime          @default(now())
+  generatedBy    String
+  emailStatus    PayslipSendStatus @default(non_envoye)
+  whatsappStatus PayslipSendStatus @default(non_envoye)
+  smsStatus      PayslipSendStatus @default(non_envoye)
+  emailSentAt    DateTime?
+  whatsappSentAt DateTime?
+  smsSentAt      DateTime?
+  baseSalary     Float
+  overtimeAmount Float             @default(0)
+  salaireBrut    Float
+  cnssEmployee   Float
+  cnssEmployer   Float             @default(0)
+  iuts           Float
+  coutEmployeur  Float             @default(0)
+  salaireNet     Float
+  primes         Json
+  indemnites     Json
+  avances        Json
+  retenues       Json
+
+  @@unique([cycleId, employeeId])
+}
+
+// ── Passerelle LaafiPay → LaafiCompta ───────────────────────────
+// Ces deux modèles vivent dans la même base le temps que LaafiCompta n'a
+// pas encore de service ni de base séparés : ComptaOutboxEvent est le
+// registre d'émission côté LaafiPay (garantit qu'un événement "cycle
+// validé" est livré même si l'appel HTTP échoue au moment de la
+// validation — voir server/src/lib/comptaBridge.ts), ComptaJournalEntry
+// est le récepteur côté LaafiCompta (POST /api/compta/payroll-events).
+// Le jour où LaafiCompta devient un service à part, seuls l'URL/la clé
+// d'API changent — le contrat JSON et l'idempotence par sourceEventId
+// restent identiques.
+model ComptaOutboxEvent {
+  id        String             @id @default(cuid())
+  companyId String
+  company   Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  cycleId   String
+  cycle     PayrollCycle       @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  eventType String             @default("payroll.cycle.valide")
+  payload   Json
+  status    ComptaOutboxStatus @default(en_attente)
+  attempts  Int                @default(0)
+  lastError String?
+  createdAt DateTime           @default(now())
+  sentAt    DateTime?
+
+  @@unique([cycleId])
+}
+
+model ComptaJournalEntry {
+  id            String              @id @default(cuid())
+  companyId     String
+  company       Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  journal       ComptaJournalCode
+  piece         String
+  dateEcriture  DateTime
+  libelle       String
+  sourceSystem  String              @default("LaafiPay")
+  sourceEventId String              @unique
+  receivedAt    DateTime            @default(now())
+  lignes        ComptaJournalLine[]
+
+  // Contrôle interne LaafiCompta : la comptabilité (permission
+  // payments:validate — accountant/admin, distinct de payments:initiate
+  // côté RH) autorise le paiement des salaires correspondant à cette OD.
+  // Découplé du statut de livraison de l'outbox : une OD peut être reçue
+  // sans que le paiement soit encore validé.
+  paymentValidated   Boolean   @default(false)
+  paymentValidatedAt DateTime?
+  paymentValidatedBy String?
+}
+
+model ComptaJournalLine {
+  id            String             @id @default(cuid())
+  entryId       String
+  entry         ComptaJournalEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  compte        String
+  libelleCompte String
+  debit         Float              @default(0)
+  credit        Float              @default(0)
+}
+
+// ── Paiement de masse des salaires ──────────────────────────────
+// La création d'un PaymentOrder est bloquée côté serveur tant que l'OD du
+// cycle correspondant n'a pas été validée par la comptabilité dans
+// LaafiCompta (ComptaJournalEntry.paymentValidated — voir
+// getPaymentValidationForCycle() dans lib/comptaBridge.ts et
+// routes/payments.routes.ts). Double contrôle volontaire : la validation
+// compta autorise le principe du paiement au niveau du cycle, puis
+// `approve` ci-dessous est une seconde validation humaine (payments:validate)
+// avant l'exécution effective, propre à cet ordre de paiement.
+model PaymentOrder {
+  id           String               @id @default(cuid())
+  companyId    String
+  company      Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  cycleId      String
+  cycle        PayrollCycle         @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  type         PaymentOrderType
+  status       PaymentStatus        @default(en_attente)
+  totalAmount  Float
+  createdAt    DateTime             @default(now())
+  createdBy    String
+  validatedAt  DateTime?
+  validatedBy  String?
+  transactions PaymentTransaction[]
+}
+
+model PaymentTransaction {
+  id           String               @id @default(cuid())
+  orderId      String
+  order        PaymentOrder         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  employeeId   String
+  employee     Employee             @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  amount       Float
+  status       PaymentStatus        @default(en_attente)
+  type         PaymentOrderType
+  operator     MobileMoneyOperator?
+  phoneNumber  String?
+  reference    String?
+  processedAt  DateTime?
+  errorMessage String?
+  retryCount   Int                  @default(0)
+}
+
+// ── Trésorerie & Rapprochement (LaafiCompta) ────────────────────
+// Pas d'intégration directe avec une banque ou un opérateur Mobile Money
+// (aucun identifiant réel disponible) : les soldes/mouvements arrivent
+// par import manuel (relevé CSV — voir routes/treasury.routes.ts). Le
+// rapprochement automatique ne peut matcher que ce que l'app connaît déjà
+// en interne : les décaissements salariaux (PaymentTransaction, voir
+// lib/treasuryMatching.ts). Tout le reste attend une association
+// manuelle par le comptable — pas de fausse automatisation pour des
+// comptes clients/fournisseurs que l'app ne modélise pas.
+model TreasuryAccount {
+  id             String                       @id @default(cuid())
+  companyId      String
+  company        Company                      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  label          String
+  kind           TreasuryAccountKind
+  provider       TreasuryMobileMoneyProvider?
+  countryCode    CountryCode
+  currencyCode   CurrencyCode
+  openingBalance Float                        @default(0)
+  createdAt      DateTime                     @default(now())
+  transactions   TreasuryTransaction[]
+}
+
+model TreasuryTransaction {
+  id                          String                  @id @default(cuid())
+  accountId                   String
+  account                     TreasuryAccount         @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  companyId                   String
+  company                     Company                 @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  date                        DateTime
+  libelle                     String
+  montant                     Float
+  sens                        TreasuryTransactionSens
+  statut                      ReconciliationStatus    @default(en_attente)
+  compteApparie               String?
+  libelleCompteApparie        String?
+  // Référence libre vers PaymentTransaction.id quand le rapprochement
+  // automatique a trouvé une correspondance — pas de relation Prisma
+  // formelle (même logique que ComptaJournalEntry.sourceEventId) : ça
+  // reste une référence inter-domaine, pas une contrainte d'intégrité.
+  matchedPaymentTransactionId String?
+  importBatch                 String?
+  createdAt                   DateTime                @default(now())
+}
+
+model LeaveRequest {
+  id            String       @id @default(cuid())
+  companyId     String
+  company       Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeId    String
+  employee      Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  type          LeaveType
+  startDate     DateTime
+  endDate       DateTime
+  daysCount     Float
+  reason        String?
+  status        LeaveStatus  @default(en_attente)
+  channel       LeaveChannel @default(portail)
+  submittedAt   DateTime     @default(now())
+  reviewedAt    DateTime?
+  reviewedBy    String?
+  reviewComment String?
+
+  @@index([companyId])
+  @@index([employeeId])
+}
+
+// Un solde par (employé, année, type de congé) — pending reflète les
+// demandes en_attente non encore tranchées, remaining = acquired - taken
+// (pending est indicatif, pas déduit du solde disponible réel).
+model LeaveBalance {
+  id         String    @id @default(cuid())
+  companyId  String
+  company    Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeId String
+  employee   Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  year       Int
+  type       LeaveType
+  acquired   Float     @default(0)
+  taken      Float     @default(0)
+  remaining  Float     @default(0)
+  pending    Float     @default(0)
+
+  @@unique([employeeId, year, type])
+}
+
+model ReviewCycle {
+  id        String              @id @default(cuid())
+  companyId String
+  company   Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name      String
+  year      Int
+  startDate DateTime
+  endDate   DateTime
+  status    ReviewCycleStatus   @default(brouillon)
+  createdBy String
+  createdAt DateTime            @default(now())
+  reviews   PerformanceReview[]
+}
+
+// Un entretien par (cycle, employé). managerId est figé à la création (photo
+// du manager de l'employé à ce moment-là) pour que le rattachement de
+// l'entretien ne bouge pas si l'employé change de manager en cours de cycle —
+// même logique que LegalSettings figé sur PayrollCycle.
+model PerformanceReview {
+  id String @id @default(cuid())
+
+  companyId String
+  company   Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  cycleId   String
+  cycle     ReviewCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  managerId  String?
+
+  status ReviewStatus @default(planifie)
+
+  objectives      String?
+  selfAssessment  String?
+  selfRating      Int?
+  selfSubmittedAt DateTime?
+
+  managerAssessment  String?
+  managerRating      Int?
+  nextObjectives     String?
+  managerSubmittedAt DateTime?
+
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([cycleId, employeeId])
+  @@index([companyId])
+  @@index([employeeId])
+  @@index([managerId])
 }

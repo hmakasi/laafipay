@@ -24,6 +24,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PermissionGate } from '@/components/auth/PermissionGate';
 import { TeamLeaveCalendar } from '@/pages/leaves/TeamLeaveCalendar';
+import { LeaveBalanceTracking } from '@/pages/leaves/LeaveBalanceTracking';
 import {
   useApproveLeaveRequestMutation,
   useLeaveRequestsQuery,
@@ -48,10 +49,14 @@ function RefuseDialog({ requestId }: { requestId: string }) {
 
   const handleRefuse = async () => {
     if (!user || !comment.trim()) return;
-    await refuseMutation.mutateAsync({ id: requestId, reviewedBy: user.email, comment });
-    toast.success(t('leaves.refuseRequest'));
-    setOpen(false);
-    setComment('');
+    try {
+      await refuseMutation.mutateAsync({ id: requestId, reviewedBy: user.email, comment });
+      toast.success(t('leaves.refuseRequest'));
+      setOpen(false);
+      setComment('');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur lors du refus');
+    }
   };
 
   return (
@@ -106,8 +111,12 @@ export function LeavesListPage() {
 
   const handleApprove = async (id: string) => {
     if (!user) return;
-    await approveMutation.mutateAsync({ id, reviewedBy: user.email });
-    toast.success(t('leaves.validateRequest'));
+    try {
+      await approveMutation.mutateAsync({ id, reviewedBy: user.email });
+      toast.success(t('leaves.validateRequest'));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur lors de la validation');
+    }
   };
 
   const sorted = [...(requests ?? [])].sort((a, b) => b.submittedAt.localeCompare(a.submittedAt));
@@ -136,6 +145,7 @@ export function LeavesListPage() {
       <Tabs defaultValue="requests">
         <TabsList>
           <TabsTrigger value="requests">{t('leaves.pendingRequests')}</TabsTrigger>
+          <TabsTrigger value="tracking">{t('leaves.balanceTracking')}</TabsTrigger>
           <TabsTrigger value="calendar">{t('leaves.departmentCalendar')}</TabsTrigger>
         </TabsList>
 
@@ -236,6 +246,10 @@ export function LeavesListPage() {
           </CardContent>
         </Card>
       )}
+        </TabsContent>
+
+        <TabsContent value="tracking">
+          <LeaveBalanceTracking />
         </TabsContent>
 
         <TabsContent value="calendar">

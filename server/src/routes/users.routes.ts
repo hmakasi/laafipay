@@ -30,6 +30,7 @@ const createUserSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
   role: roleSchema,
+  employeeId: z.string().optional(),
 });
 
 usersRouter.post(
@@ -43,6 +44,18 @@ usersRouter.post(
       throw new HttpError(409, 'Cette adresse e-mail est déjà utilisée');
     }
 
+    if (body.employeeId) {
+      const employee = await prisma.employee.findFirst({
+        where: { id: body.employeeId, companyId: req.user!.companyId },
+      });
+      if (!employee) throw new NotFoundError(`Employé ${body.employeeId} introuvable`);
+
+      const linkedUser = await prisma.user.findUnique({ where: { employeeId: body.employeeId } });
+      if (linkedUser) {
+        throw new HttpError(409, 'Cet employé a déjà un compte utilisateur');
+      }
+    }
+
     const passwordHash = await bcrypt.hash(body.password, 10);
     const user = await prisma.user.create({
       data: {
@@ -52,6 +65,7 @@ usersRouter.post(
         email: body.email,
         passwordHash,
         role: body.role,
+        employeeId: body.employeeId,
       },
     });
     res.status(201).json(toUserDTO(user));

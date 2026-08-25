@@ -7,7 +7,7 @@ import { LoginPage } from '@/pages/LoginPage';
 import { SignupPage } from '@/pages/SignupPage';
 import { OnboardingPage } from '@/pages/OnboardingPage';
 import { DashboardPage } from '@/pages/DashboardPage';
-import { ComingSoonPage } from '@/pages/ComingSoonPage';
+import { CompanySettingsPage } from '@/pages/CompanySettingsPage';
 import { EmployeesListPage } from '@/pages/employees/EmployeesListPage';
 import { EmployeeDetailPage } from '@/pages/employees/EmployeeDetailPage';
 import { EmployeeFormPage } from '@/pages/employees/EmployeeFormPage';
@@ -25,6 +25,12 @@ import { ReportsPage } from '@/pages/ReportsPage';
 import { UsersPage } from '@/pages/users/UsersPage';
 import { AuditPage } from '@/pages/audit/AuditPage';
 import { LandingPage } from '@/pages/LandingPage';
+import { ComptaLayout } from '@/components/compta/ComptaLayout';
+import { ComptaDashboardPage } from '@/pages/compta/ComptaDashboardPage';
+import { ComptaComingSoonPage } from '@/pages/compta/ComptaComingSoonPage';
+import { TresorerieRapprochementPage } from '@/pages/compta/TresorerieRapprochementPage';
+import { WhatsAppAccountingPage } from '@/pages/compta/WhatsAppAccountingPage';
+import { PasserellePaiePage } from '@/pages/compta/PasserellePaiePage';
 
 function NotFoundRedirect() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -182,7 +188,25 @@ export function AppRouter() {
                 </RequirePermission>
               }
             />
-            <Route path="settings" element={<ComingSoonPage titleKey="nav.settings" />} />
+            <Route
+              path="settings"
+              element={
+                <RequirePermission permission="settings:write">
+                  <CompanySettingsPage />
+                </RequirePermission>
+              }
+            />
+          </Route>
+
+          <Route path="compta" element={<ComptaLayout />}>
+            <Route index element={<ComptaDashboardPage />} />
+            <Route path="passerelle-paie" element={<PasserellePaiePage />} />
+            <Route path="whatsapp" element={<WhatsAppAccountingPage />} />
+            <Route path="tresorerie" element={<TresorerieRapprochementPage />} />
+            <Route path="fiscal" element={<ComptaComingSoonPage title="Copilote Fiscal" />} />
+            <Route path="journal" element={<ComptaComingSoonPage title="Journal & Écritures" />} />
+            <Route path="rapports" element={<ComptaComingSoonPage title="États financiers" />} />
+            <Route path="parametres" element={<ComptaComingSoonPage title="Paramètres LaafiCompta" />} />
           </Route>
         </Route>
 

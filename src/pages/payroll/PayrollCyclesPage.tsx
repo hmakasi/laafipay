@@ -42,10 +42,18 @@ export function PayrollCyclesPage() {
       toast.error('Un cycle existe déjà pour cette période');
       return;
     }
-    const created = await createMutation.mutateAsync(period);
-    setOpen(false);
-    setPeriod('');
-    navigate(`/payroll/${created.id}`);
+    try {
+      const created = await createMutation.mutateAsync(period);
+      setOpen(false);
+      setPeriod('');
+      navigate(`/payroll/${created.id}`);
+    } catch (err) {
+      // Sans ce catch, un rejet (ex. "Aucun barème CNSS/IUTS configuré pour
+      // cette entreprise" renvoyé par le serveur quand Barèmes légaux n'a
+      // jamais été rempli) ne remontait nulle part : le clic sur Confirmer
+      // semblait ne rien faire, dialogue toujours ouvert, aucun message.
+      toast.error(err instanceof Error ? err.message : 'Erreur lors de la création du cycle de paie');
+    }
   };
 
   return (

@@ -11,7 +11,10 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useCreateUserMutation } from '@/hooks/useUsers';
+import { useEmployeesQuery } from '@/hooks/useEmployees';
 import { USER_ROLES } from '@/lib/constants';
+
+const NO_EMPLOYEE = '__none__';
 
 const createUserSchema = z.object({
   firstName: z.string().min(1, 'Champ requis'),
@@ -19,6 +22,7 @@ const createUserSchema = z.object({
   email: z.string().min(1, 'Champ requis').email('Adresse e-mail invalide'),
   password: z.string().min(8, 'Le mot de passe doit contenir au moins 8 caractères'),
   role: z.enum(['admin', 'hr_manager', 'manager', 'accountant', 'employee']),
+  employeeId: z.string(),
 });
 
 type CreateUserFormValues = z.infer<typeof createUserSchema>;
@@ -27,15 +31,20 @@ export function CreateUserDialog() {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const createMutation = useCreateUserMutation();
+  const { data: employeesPage } = useEmployeesQuery({ perPage: 1000 });
 
   const form = useForm<CreateUserFormValues>({
     resolver: zodResolver(createUserSchema),
-    defaultValues: { firstName: '', lastName: '', email: '', password: '', role: 'employee' },
+    defaultValues: { firstName: '', lastName: '', email: '', password: '', role: 'employee', employeeId: NO_EMPLOYEE },
   });
 
   const submit = async (values: CreateUserFormValues) => {
     try {
-      await createMutation.mutateAsync(values);
+      const { employeeId, ...rest } = values;
+      await createMutation.mutateAsync({
+        ...rest,
+        employeeId: employeeId === NO_EMPLOYEE ? undefined : employeeId,
+      });
       toast.success(t('settings.createUser'));
       form.reset();
       setOpen(false);
@@ -128,6 +137,31 @@ export function CreateUserDialog() {
                       {USER_ROLES.map((r) => (
                         <SelectItem key={r} value={r}>
                           {t(`roles.${r}`)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="employeeId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('settings.linkedEmployee')}</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value={NO_EMPLOYEE}>{t('settings.noLinkedEmployee')}</SelectItem>
+                      {employeesPage?.data.map((emp) => (
+                        <SelectItem key={emp.id} value={emp.id}>
+                          {emp.firstName} {emp.lastName}
                         </SelectItem>
                       ))}
                     </SelectContent>

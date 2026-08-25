@@ -1,4 +1,6 @@
 import {
+  AmendmentType,
+  ContractStatus,
   ContractType,
   CountryCode,
   CurrencyCode,
@@ -22,6 +24,23 @@ export interface CountryMeta {
   currencies: CurrencyCode[]; // devises disponibles à la création d'entreprise
   defaultCurrency: CurrencyCode;
   taxIdLabel: string; // libellé de l'identifiant fiscal, propre au pays
+  socialAgencyLabel: string; // "CNSS"/"INSS" selon le pays — jamais "URSSAF"
+  // Nom de l'impôt sur salaire prélevé à la source, propre au pays (IUTS au
+  // Burkina Faso, ITS au Bénin) — affiché sur la ligne "impôt" du simulateur
+  // et du bulletin officiel. Seuls les libellés changent ici, jamais les
+  // taux/tranches (saisis par l'entreprise dans Barèmes légaux).
+  incomeTaxLabel: string;
+  // Ordre d'affichage des deux identifiants employeur sur le bloc gauche du
+  // bulletin officiel (PayslipOfficialTemplate) et de l'aperçu
+  // (PayslipEmployerHeader). Seul le Bénin a une exigence connue à date
+  // (CNSS avant IFU) ; les autres pays gardent l'ordre historique en
+  // attendant leur propre spec.
+  employerNumbersOrder: Array<'taxId' | 'cnss'>;
+  // Champs du bloc employeur dont l'absence sur le bulletin n'est pas
+  // acceptable pour ce pays — utilisé par CompanySettingsPage pour rendre
+  // ces champs obligatoires. Le nom (name) est toujours requis, quel que
+  // soit le pays, donc absent de cette liste.
+  requiredEmployerFields: Array<'address' | 'taxId' | 'cnss'>;
 }
 
 export const COUNTRY_CODES: CountryCode[] = ['BF', 'BJ', 'CD'];
@@ -34,6 +53,10 @@ export const COUNTRY_META: Record<CountryCode, CountryMeta> = {
     currencies: ['XOF'],
     defaultCurrency: 'XOF',
     taxIdLabel: "Numéro NIF (Numéro d'Identifiant Fiscal)",
+    socialAgencyLabel: 'CNSS',
+    incomeTaxLabel: 'IUTS',
+    employerNumbersOrder: ['taxId', 'cnss'],
+    requiredEmployerFields: [],
   },
   BJ: {
     code: 'BJ',
@@ -42,6 +65,11 @@ export const COUNTRY_META: Record<CountryCode, CountryMeta> = {
     currencies: ['XOF'],
     defaultCurrency: 'XOF',
     taxIdLabel: 'Numéro IFU (Identifiant Fiscal Unique)',
+    socialAgencyLabel: 'CNSS',
+    incomeTaxLabel: 'ITS',
+    // Entête employeur bulletin béninois : nom, adresse, N° CNSS puis N° IFU.
+    employerNumbersOrder: ['cnss', 'taxId'],
+    requiredEmployerFields: ['address', 'cnss', 'taxId'],
   },
   CD: {
     code: 'CD',
@@ -50,6 +78,10 @@ export const COUNTRY_META: Record<CountryCode, CountryMeta> = {
     currencies: ['CDF', 'USD'],
     defaultCurrency: 'CDF',
     taxIdLabel: 'Numéro Impôt / ID.NAT',
+    socialAgencyLabel: 'INSS',
+    incomeTaxLabel: 'IUTS',
+    employerNumbersOrder: ['taxId', 'cnss'],
+    requiredEmployerFields: [],
   },
 };
 
@@ -89,6 +121,23 @@ export const EMPLOYEE_STATUS_VARIANT: Record<EmployeeStatus, 'success' | 'warnin
   en_conge: 'secondary',
   suspendu: 'destructive',
   offboarded: 'secondary',
+};
+
+export const CONTRACT_STATUSES: ContractStatus[] = ['actif', 'termine', 'rompu'];
+
+export const AMENDMENT_TYPES: AmendmentType[] = [
+  'renouvellement',
+  'changement_poste',
+  'changement_salaire',
+  'changement_departement',
+  'prolongation',
+  'autre',
+];
+
+export const CONTRACT_STATUS_VARIANT: Record<ContractStatus, 'success' | 'warning' | 'secondary' | 'destructive'> = {
+  actif: 'success',
+  termine: 'secondary',
+  rompu: 'destructive',
 };
 
 export const PAYROLL_STATUS_VARIANT: Record<string, 'success' | 'warning' | 'secondary' | 'destructive' | 'default'> = {

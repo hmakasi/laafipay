@@ -33,6 +33,19 @@ export async function getDepartments(): Promise<Department[]> {
   return apiClient.get<Department[]>('/departments');
 }
 
+export async function createDepartment(data: { name: string; code: string }): Promise<Department> {
+  return apiClient.post<Department>('/departments', data);
+}
+
+// Employés réels (Postgres), pour les modules qui doivent joindre/filtrer
+// sur l'effectif complet (congés, avances, paiements, bulletins) au lieu de
+// piocher dans un mock déconnecté (MOCK_EMPLOYEES) — un employé créé après
+// coup doit apparaître partout, pas seulement dans la liste employés.
+export async function getAllEmployees(): Promise<Employee[]> {
+  const { data } = await getEmployees({ perPage: 1000 });
+  return data;
+}
+
 export async function uploadDocument(employeeId: string, file: File): Promise<EmployeeDocument> {
   const formData = new FormData();
   formData.append('file', file);

@@ -43,3 +43,36 @@ export async function createCompany(payload: CreateCompanyPayload): Promise<Comp
 export async function getCurrentCompany(): Promise<Company> {
   return apiClient.get<Company>('/companies/me');
 }
+
+// Champs de profil éditables — countryCode/currencyCode volontairement
+// exclus : server/src/routes/companies.routes.ts les refuse aussi (les
+// changer rouvrirait la question des paies déjà calculées dans l'ancien
+// pays/l'ancienne devise).
+export type UpdateCompanyPayload = Partial<
+  Pick<
+    Company,
+    | 'name'
+    | 'legalName'
+    | 'taxIdNumber'
+    | 'rccm'
+    | 'address'
+    | 'postalCode'
+    | 'city'
+    | 'activityCode'
+    | 'collectiveAgreement'
+    | 'socialSecurityNumber'
+    | 'phone'
+    | 'email'
+    | 'logo'
+  >
+>;
+
+export async function updateCompany(payload: UpdateCompanyPayload): Promise<Company> {
+  return apiClient.patch<Company>('/companies/me', payload);
+}
+
+export async function uploadCompanyLogo(file: File): Promise<Company> {
+  const formData = new FormData();
+  formData.append('logo', file);
+  return apiClient.post<Company>('/companies/me/logo', formData);
+}

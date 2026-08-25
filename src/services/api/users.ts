@@ -21,6 +21,7 @@ export interface CreateUserPayload {
   email: string;
   password: string;
   role: User['role'];
+  employeeId?: string;
 }
 
 export async function createUser(data: CreateUserPayload): Promise<User> {

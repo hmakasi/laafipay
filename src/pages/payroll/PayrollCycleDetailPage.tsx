@@ -35,7 +35,7 @@ import { useCurrentCompanyQuery } from '@/hooks/useCompanies';
 import { useAuthStore } from '@/store/authStore';
 import { PAYROLL_STATUS_VARIANT } from '@/lib/constants';
 import { formatCurrency, formatPeriod } from '@/lib/utils';
-import { PayrollEntry } from '@/types';
+import { PayrollEntry, VariableElement } from '@/types';
 import { InitiatePaymentSection } from '@/pages/payroll/InitiatePaymentSection';
 
 function EditEntryDialog({
@@ -53,27 +53,49 @@ function EditEntryDialog({
 }) {
   const { t } = useTranslation();
   const updateMutation = useUpdatePayrollEntryMutation(cycleId);
-  const [primes, setPrimes] = useState(String(entry.primes[0]?.amount ?? 0));
+  // Une entrée par rubrique existante (indemnités du catalogue — logement,
+  // transport... — et primes, y compris les rubriques sur-mesure) au lieu
+  // d'un unique champ "Prime" générique : avant, ce champ écrasait toute
+  // rubrique déjà présente sur la ligne (ex. "Indemnité de logement" cochée
+  // dans Configuration du bulletin) et ne laissait aucun moyen de la
+  // renseigner — d'où l'impression qu'elle "ne s'affichait pas" sur le
+  // bulletin alors qu'elle existait avec un montant resté à 0.
+  const [primes, setPrimes] = useState<VariableElement[]>(entry.primes);
+  const [indemnites, setIndemnites] = useState<VariableElement[]>(entry.indemnites);
   const [avances, setAvances] = useState(String(entry.avances[0]?.amount ?? 0));
   const [retenues, setRetenues] = useState(String(entry.retenues[0]?.amount ?? 0));
   const [absenceDays, setAbsenceDays] = useState(String(entry.absenceDays));
   const [absenceAmount, setAbsenceAmount] = useState(String(entry.absenceAmount));
 
+  const updateAmount = (
+    list: VariableElement[],
+    setList: (items: VariableElement[]) => void,
+    id: string,
+    value: string
+  ) => {
+    setList(list.map((item) => (item.id === id ? { ...item, amount: Number(value) || 0 } : item)));
+  };
+
   const handleSave = async () => {
-    await updateMutation.mutateAsync({
-      entryId: entry.id,
-      data: {
-        primes: Number(primes) > 0 ? [{ id: 'prime-1', label: 'Prime', amount: Number(primes), type: 'prime' }] : [],
-        avances:
-          Number(avances) > 0 ? [{ id: 'avance-1', label: 'Avance sur salaire', amount: Number(avances), type: 'avance' }] : [],
-        retenues:
-          Number(retenues) > 0 ? [{ id: 'retenue-1', label: 'Retenue', amount: Number(retenues), type: 'retenue' }] : [],
-        absenceDays: Number(absenceDays),
-        absenceAmount: Number(absenceAmount),
-      },
-    });
-    toast.success(t('app.save'));
-    onOpenChange(false);
+    try {
+      await updateMutation.mutateAsync({
+        entryId: entry.id,
+        data: {
+          primes,
+          indemnites,
+          avances:
+            Number(avances) > 0 ? [{ id: 'avance-1', label: 'Avance sur salaire', amount: Number(avances), type: 'avance' }] : [],
+          retenues:
+            Number(retenues) > 0 ? [{ id: 'retenue-1', label: 'Retenue', amount: Number(retenues), type: 'retenue' }] : [],
+          absenceDays: Number(absenceDays),
+          absenceAmount: Number(absenceAmount),
+        },
+      });
+      toast.success(t('app.save'));
+      onOpenChange(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur lors de l\'enregistrement');
+    }
   };
 
   return (
@@ -85,10 +107,28 @@ function EditEntryDialog({
           </DialogTitle>
         </DialogHeader>
         <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label>{t('payroll.primes')}</Label>
-            <Input type="number" min={0} value={primes} onChange={(e) => setPrimes(e.target.value)} />
-          </div>
+          {indemnites.map((item) => (
+            <div key={item.id} className="space-y-2">
+              <Label>{item.label}</Label>
+              <Input
+                type="number"
+                min={0}
+                value={item.amount}
+                onChange={(e) => updateAmount(indemnites, setIndemnites, item.id, e.target.value)}
+              />
+            </div>
+          ))}
+          {primes.map((item) => (
+            <div key={item.id} className="space-y-2">
+              <Label>{item.label}</Label>
+              <Input
+                type="number"
+                min={0}
+                value={item.amount}
+                onChange={(e) => updateAmount(primes, setPrimes, item.id, e.target.value)}
+              />
+            </div>
+          ))}
           <div className="space-y-2">
             <Label>{t('payroll.avances')}</Label>
             <Input type="number" min={0} value={avances} onChange={(e) => setAvances(e.target.value)} />
@@ -135,8 +175,12 @@ export function PayrollCycleDetailPage() {
 
   const handleValidate = async () => {
     if (!id || !user) return;
-    await validateMutation.mutateAsync({ id, validatedBy: user.email });
-    toast.success(t('payroll.validateCycle'));
+    try {
+      await validateMutation.mutateAsync({ id, validatedBy: user.email });
+      toast.success(t('payroll.validateCycle'));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur lors de la validation du cycle');
+    }
   };
 
   if (isLoading || !cycle) {

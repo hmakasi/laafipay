@@ -21,9 +21,12 @@ import {
 } from '@/components/ui/alert-dialog';
 import { PermissionGate } from '@/components/auth/PermissionGate';
 import { useDeleteEmployeeMutation, useDepartmentsQuery, useEmployeeQuery } from '@/hooks/useEmployees';
+import { useEmployeeContractsQuery } from '@/hooks/useContracts';
 import { useCurrentCompanyQuery } from '@/hooks/useCompanies';
-import { EMPLOYEE_STATUS_VARIANT } from '@/lib/constants';
+import { CONTRACT_STATUS_VARIANT, EMPLOYEE_STATUS_VARIANT } from '@/lib/constants';
 import { formatCurrency, formatDate, getInitials } from '@/lib/utils';
+import { NewContractDialog } from '@/pages/employees/NewContractDialog';
+import { NewAmendmentDialog } from '@/pages/employees/NewAmendmentDialog';
 
 function Field({ label, value }: { label: string; value?: string | number | null }) {
   return (
@@ -40,15 +43,20 @@ export function EmployeeDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { data: emp, isLoading } = useEmployeeQuery(id);
   const { data: departments } = useDepartmentsQuery();
+  const { data: contracts } = useEmployeeContractsQuery(id);
   const { data: company } = useCurrentCompanyQuery();
   const currencyCode = company?.currencyCode;
   const deleteMutation = useDeleteEmployeeMutation();
 
   const handleDelete = async () => {
     if (!id) return;
-    await deleteMutation.mutateAsync(id);
-    toast.success(t('app.delete'));
-    navigate('/employees');
+    try {
+      await deleteMutation.mutateAsync(id);
+      toast.success(t('app.delete'));
+      navigate('/employees');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur lors de la suppression');
+    }
   };
 
   if (isLoading) {
@@ -63,6 +71,8 @@ export function EmployeeDetailPage() {
   if (!emp) {
     return <p className="text-muted-foreground">{t('app.noData')}</p>;
   }
+
+  const currentContract = contracts?.find((c) => c.isCurrent);
 
   return (
     <div className="space-y-6">
@@ -147,7 +157,7 @@ export function EmployeeDetailPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="contract">
+        <TabsContent value="contract" className="space-y-4">
           <Card>
             <CardContent className="grid grid-cols-2 gap-4 p-6 md:grid-cols-3">
               <Field label={t('employees.contract')} value={t(`employees.contract_${emp.contractType}`)} />
@@ -161,6 +171,59 @@ export function EmployeeDetailPage() {
                 value={departments?.find((d) => d.id === emp.departmentId)?.name}
               />
               <Field label="Site" value={emp.siteLocation} />
+            </CardContent>
+          </Card>
+
+          <PermissionGate permission="employees:write">
+            <div className="flex flex-wrap gap-2">
+              {departments && <NewContractDialog employeeId={emp.id} departments={departments} />}
+              {departments && currentContract && (
+                <NewAmendmentDialog employeeId={emp.id} contract={currentContract} departments={departments} />
+              )}
+            </div>
+          </PermissionGate>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="mb-4 text-xs font-semibold uppercase text-muted-foreground">
+                {t('employees.contracts.history')}
+              </div>
+              {!contracts?.length ? (
+                <p className="text-sm text-muted-foreground">{t('app.noData')}</p>
+              ) : (
+                <div className="space-y-4">
+                  {contracts.map((contract) => (
+                    <div key={contract.id} className="rounded-md border p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="font-medium">
+                          {t(`employees.contract_${contract.contractType}`)} — {formatDate(contract.startDate)}
+                          {contract.endDate ? ` → ${formatDate(contract.endDate)}` : ''}
+                        </div>
+                        <Badge variant={CONTRACT_STATUS_VARIANT[contract.status]}>
+                          {t(`employees.contracts.status_${contract.status}`)}
+                        </Badge>
+                      </div>
+                      <div className="mt-1 text-sm text-muted-foreground">
+                        {contract.position} · {departments?.find((d) => d.id === contract.departmentId)?.name} ·{' '}
+                        {formatCurrency(contract.baseSalary, currencyCode)}
+                      </div>
+                      {contract.amendments.length > 0 && (
+                        <ul className="mt-3 space-y-2 border-t pt-3">
+                          {contract.amendments.map((amendment) => (
+                            <li key={amendment.id} className="border-l-2 border-primary/30 pl-3">
+                              <div className="text-sm">{amendment.description}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {t(`employees.contracts.amendmentType_${amendment.type}`)} ·{' '}
+                                {formatDate(amendment.effectiveDate)}
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

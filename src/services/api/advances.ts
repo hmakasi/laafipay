@@ -1,6 +1,6 @@
 import { SalaryAdvanceRequest } from '@/types';
 import { MOCK_ADVANCE_REQUESTS } from '@/mocks/advances';
-import { MOCK_EMPLOYEES } from '@/mocks/employees';
+import { getAllEmployees } from '@/services/api/employees';
 import { delay, deepClone, generateRef } from '@/lib/utils';
 import { notifyEmployee } from '@/services/api/users';
 
@@ -33,7 +33,8 @@ export async function payAdvanceRequestViaMobileMoney(id: string): Promise<Salar
   await delay(1500);
   const advance = advances.find((a) => a.id === id);
   if (!advance) throw new Error(`Demande d'avance ${id} introuvable`);
-  const employee = MOCK_EMPLOYEES.find((e) => e.id === advance.employeeId);
+  const employees = await getAllEmployees();
+  const employee = employees.find((e) => e.id === advance.employeeId);
 
   advance.status = 'verse_mobile_money';
   advance.mobileMoneyOperator = employee?.mobileMoneyInfo?.operator ?? advance.mobileMoneyOperator ?? 'orange';

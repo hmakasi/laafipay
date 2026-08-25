@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAuthStore } from '@/store/authStore';
-import { useLeaveBalanceQuery, useLeaveRequestsQuery } from '@/hooks/useLeaves';
+import { useLeaveBalanceQuery, useLeaveDashboardQuery, useLeaveRequestsQuery } from '@/hooks/useLeaves';
 import { LEAVE_STATUS_VARIANT } from '@/lib/constants';
 import { formatDate } from '@/lib/utils';
 import { RequestLeaveDialog } from '@/pages/leaves/RequestLeaveDialog';
@@ -13,7 +13,9 @@ export function MyLeavesTab() {
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
 
+  const { data: dashboard, isLoading: loadingDashboard } = useLeaveDashboardQuery(user?.employeeId);
   const { data: balances, isLoading: loadingBalances } = useLeaveBalanceQuery(user?.employeeId);
+  const otherBalances = balances?.filter((b) => b.type !== 'conge_paye') ?? [];
   const { data: requests, isLoading: loadingRequests } = useLeaveRequestsQuery({ employeeId: user?.employeeId });
 
   const sorted = [...(requests ?? [])].sort((a, b) => b.submittedAt.localeCompare(a.submittedAt));
@@ -24,29 +26,61 @@ export function MyLeavesTab() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">{t('leaves.myBalance')}</CardTitle>
+          <CardTitle className="text-base">{t('leaves.paidLeaveDashboard')}</CardTitle>
         </CardHeader>
         <CardContent>
-          {loadingBalances ? (
+          {loadingDashboard ? (
             <Skeleton className="h-20 w-full" />
-          ) : !balances?.length ? (
+          ) : !dashboard ? (
             <p className="py-4 text-center text-muted-foreground">{t('app.noData')}</p>
           ) : (
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-              {balances.map((b) => (
-                <div key={`${b.type}-${b.year}`} className="rounded-md border p-3 text-center">
-                  <div className="text-xs text-muted-foreground">{t(`leaves.type_${b.type}`)}</div>
-                  <div className="text-xl font-semibold text-primary">{b.remaining}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {t('leaves.acquired')} {b.acquired} · {t('leaves.taken')} {b.taken}
-                    {b.pending > 0 && ` · ${t('leaves.pending')} ${b.pending}`}
-                  </div>
-                </div>
-              ))}
+              <div className="rounded-md border p-3 text-center">
+                <div className="text-xs text-muted-foreground">{t('leaves.acquired')}</div>
+                <div className="text-xl font-semibold">{dashboard.acquired}</div>
+              </div>
+              <div className="rounded-md border p-3 text-center">
+                <div className="text-xs text-muted-foreground">{t('leaves.accruing')}</div>
+                <div className="text-xl font-semibold">{dashboard.accruing}</div>
+              </div>
+              <div className="rounded-md border p-3 text-center">
+                <div className="text-xs text-muted-foreground">{t('leaves.taken')}</div>
+                <div className="text-xl font-semibold">{dashboard.taken}</div>
+              </div>
+              <div className="rounded-md border p-3 text-center">
+                <div className="text-xs text-muted-foreground">{t('leaves.remaining')}</div>
+                <div className="text-xl font-semibold text-primary">{dashboard.remaining}</div>
+              </div>
             </div>
           )}
         </CardContent>
       </Card>
+
+      {(loadingBalances || otherBalances.length > 0) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">{t('leaves.otherLeaveBalances')}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loadingBalances ? (
+              <Skeleton className="h-20 w-full" />
+            ) : (
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                {otherBalances.map((b) => (
+                  <div key={`${b.type}-${b.year}`} className="rounded-md border p-3 text-center">
+                    <div className="text-xs text-muted-foreground">{t(`leaves.type_${b.type}`)}</div>
+                    <div className="text-xl font-semibold text-primary">{b.remaining}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {t('leaves.acquired')} {b.acquired} · {t('leaves.taken')} {b.taken}
+                      {b.pending > 0 && ` · ${t('leaves.pending')} ${b.pending}`}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

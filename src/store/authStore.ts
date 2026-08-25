@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import { User } from '@/types';
 import { login as loginApi, logout as logoutApi } from '@/services/api/auth';
 import { CompanySignupPayload, signupCompany } from '@/services/api/companies';
+import { queryClient } from '@/lib/queryClient';
 
 interface AuthState {
   user: User | null;
@@ -29,6 +30,12 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         try {
           const { user, token } = await loginApi(email, password);
+          // Le cache React Query n'est pas partitionné par utilisateur/entreprise
+          // (clés comme ['companies','me'] identiques pour tout le monde) — sans
+          // ce clear(), changer de compte dans le même onglet pouvait montrer les
+          // données en cache du compte précédent le temps que les requêtes
+          // refetch (jusqu'à 30 min avec certains staleTime).
+          queryClient.clear();
           set({ user, token, isAuthenticated: true, isLoading: false });
         } catch (err) {
           set({
@@ -43,6 +50,7 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         try {
           const { user, token } = await signupCompany(payload);
+          queryClient.clear();
           set({ user, token, isAuthenticated: true, isLoading: false });
         } catch (err) {
           set({
@@ -55,6 +63,7 @@ export const useAuthStore = create<AuthState>()(
 
       logout: async () => {
         await logoutApi();
+        queryClient.clear();
         set({ user: null, token: null, isAuthenticated: false });
       },
 

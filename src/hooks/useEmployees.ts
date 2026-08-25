@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Employee, FilterParams } from '@/types';
 import {
+  createDepartment,
   createEmployee,
   deleteEmployee,
   getDepartments,
@@ -30,6 +31,16 @@ export function useDepartmentsQuery() {
     queryKey: ['departments'],
     queryFn: getDepartments,
     staleTime: 5 * 60_000,
+  });
+}
+
+export function useCreateDepartmentMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { name: string; code: string }) => createDepartment(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['departments'] });
+    },
   });
 }
 

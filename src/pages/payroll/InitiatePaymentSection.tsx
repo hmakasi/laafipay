@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Landmark, Smartphone } from 'lucide-react';
+import { Landmark, ShieldAlert, Smartphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { PermissionGate } from '@/components/auth/PermissionGate';
 import { useCreateBankTransferPaymentMutation, useCreateMobileMoneyPaymentMutation, usePaymentOrdersQuery } from '@/hooks/usePayments';
 import { useCurrentCompanyQuery } from '@/hooks/useCompanies';
+import { useComptaBridgeEventsQuery } from '@/hooks/useComptaBridge';
 import { useAuthStore } from '@/store/authStore';
 import { PAYMENT_STATUS_VARIANT } from '@/lib/constants';
 import { formatCurrency, formatPeriod } from '@/lib/utils';
@@ -71,14 +72,18 @@ function EligibleEmployeesDialog({
       .filter(({ entry }) => selected.has(entry.employeeId))
       .map(({ entry }) => ({ employeeId: entry.employeeId, amount: entry.salaireNet }));
 
-    const order =
-      type === 'mobile_money'
-        ? await mobileMoneyMutation.mutateAsync({ cycleId: cycle.id, items, createdBy: user.email })
-        : await bankTransferMutation.mutateAsync({ cycleId: cycle.id, items, createdBy: user.email });
+    try {
+      const order =
+        type === 'mobile_money'
+          ? await mobileMoneyMutation.mutateAsync({ cycleId: cycle.id, items, createdBy: user.email })
+          : await bankTransferMutation.mutateAsync({ cycleId: cycle.id, items, createdBy: user.email });
 
-    toast.success(t('payments.launchPayment'));
-    setOpen(false);
-    navigate(`/payments/${order.id}`);
+      toast.success(t('payments.launchPayment'));
+      setOpen(false);
+      navigate(`/payments/${order.id}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur lors du lancement du paiement');
+    }
   };
 
   const isPending = mobileMoneyMutation.isPending || bankTransferMutation.isPending;
@@ -142,12 +147,40 @@ function EligibleEmployeesDialog({
   );
 }
 
+// L'initiation du paiement est bloquée côté serveur tant que la
+// comptabilité n'a pas validé le paiement de l'OD correspondante dans
+// LaafiCompta (voir server/src/routes/payments.routes.ts). Ce calcul ne
+// fait que refléter côté UI la même règle — le serveur la réapplique
+// systématiquement, ce n'est pas une barrière de sécurité en soi.
+function usePaymentAuthorization(cycleId: string) {
+  const { data: bridgeEvents, isLoading } = useComptaBridgeEventsQuery();
+  const event = bridgeEvents?.find((e) => e.cycleId === cycleId);
+
+  if (isLoading) return { authorized: false, loading: true, reason: null as string | null };
+  if (!event) return { authorized: false, loading: false, reason: "Ce cycle n'a pas encore été transmis à LaafiCompta." };
+  if (!event.journalEntry) {
+    return {
+      authorized: false,
+      loading: false,
+      reason:
+        event.status === 'echec'
+          ? "L'OD n'a pas pu être livrée à LaafiCompta pour l'instant (nouvelle tentative automatique en cours)."
+          : "L'OD est en cours de livraison à LaafiCompta.",
+    };
+  }
+  if (!event.journalEntry.paymentValidated) {
+    return { authorized: false, loading: false, reason: "La comptabilité n'a pas encore validé le paiement de ce cycle dans LaafiCompta." };
+  }
+  return { authorized: true, loading: false, reason: null };
+}
+
 export function InitiatePaymentSection({ cycle, employees }: { cycle: PayrollCycle; employees: Employee[] }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { data: orders } = usePaymentOrdersQuery(cycle.id);
   const { data: company } = useCurrentCompanyQuery();
   const currencyCode = company?.currencyCode;
+  const { authorized, loading, reason } = usePaymentAuthorization(cycle.id);
 
   return (
     <Card>
@@ -156,10 +189,17 @@ export function InitiatePaymentSection({ cycle, employees }: { cycle: PayrollCyc
       </CardHeader>
       <CardContent className="space-y-4">
         <PermissionGate permission="payments:initiate">
-          <div className="flex gap-2">
-            <EligibleEmployeesDialog type="mobile_money" cycle={cycle} employees={employees} />
-            <EligibleEmployeesDialog type="virement" cycle={cycle} employees={employees} />
-          </div>
+          {loading ? null : authorized ? (
+            <div className="flex gap-2">
+              <EligibleEmployeesDialog type="mobile_money" cycle={cycle} employees={employees} />
+              <EligibleEmployeesDialog type="virement" cycle={cycle} employees={employees} />
+            </div>
+          ) : (
+            <div className="flex items-start gap-2 rounded-md border border-yellow-200 bg-yellow-50 px-3 py-2 text-sm text-yellow-800 dark:border-yellow-900 dark:bg-yellow-900/20 dark:text-yellow-400">
+              <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{reason} Le paiement pourra être déclenché dès que la comptabilité l'aura validé dans LaafiCompta.</span>
+            </div>
+          )}
         </PermissionGate>
 
         {orders && orders.length > 0 && (

@@ -23,20 +23,7 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { usePayrollConfigQuery, useUpdatePayrollConfigMutation } from '@/hooks/usePayrollConfig';
-
-// Rubriques légales, toujours actives — leurs clés sont envoyées telles
-// quelles dans activeRubrics (voir services/api/payrollConfig.ts).
-const MANDATORY_RUBRIC_KEYS = ['baseSalary', 'cnss', 'its'] as const;
-
-// Catalogue des rubriques optionnelles, groupées par thème d'affichage.
-// rubricKeys pointe vers payroll.componentsSetup.categories.<cat>.rubrics.<key>
-// dans fr.json.
-const OPTIONAL_CATEGORIES = [
-  { key: 'housing', rubricKeys: ['housingAllowance'] },
-  { key: 'health', rubricKeys: ['healthInsurance'] },
-  { key: 'mobility', rubricKeys: ['transportAllowance'] },
-  { key: 'performance', rubricKeys: ['performanceBonus', 'thirteenthMonth', 'benefitsInKind'] },
-] as const;
+import { MANDATORY_RUBRIC_KEYS, OPTIONAL_RUBRIC_CATEGORIES as OPTIONAL_CATEGORIES } from '@/lib/payrollRubrics';
 
 interface CustomRubric {
   id: string;

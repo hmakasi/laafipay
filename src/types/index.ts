@@ -32,6 +32,10 @@ export type Permission =
   | 'leaves:write'
   | 'leaves:approve'
   | 'leaves:read_team'
+  // Reviews (entretiens annuels)
+  | 'reviews:read'
+  | 'reviews:write'
+  | 'reviews:manage_team'
   // Reports
   | 'reports:read'
   | 'reports:export'
@@ -44,7 +48,8 @@ export type Permission =
   // Self-service
   | 'self:payslips'
   | 'self:leaves'
-  | 'self:profile';
+  | 'self:profile'
+  | 'self:reviews';
 
 // ============================================================
 // User & Auth
@@ -85,9 +90,12 @@ export interface Company {
   countryCode: CountryCode;
   currencyCode: CurrencyCode;
   taxIdNumber: string; // NIF (BF) / IFU (BJ) / ID.NAT (CD) — libellé résolu via COUNTRY_META
-  socialSecurityNumber: string; // CNSS (BF/BJ) / INSS (CD)
+  socialSecurityNumber: string; // N° immatriculation employeur — CNSS (BF/BJ) / INSS (CD)
   address: string;
+  postalCode?: string;
   city: string;
+  activityCode?: string; // Code APE / secteur d'activité
+  collectiveAgreement?: string; // Convention collective applicable
   phone: string;
   email: string;
   logo?: string;
@@ -178,11 +186,58 @@ export interface EmployeeDocument {
 export interface CareerEvent {
   id: string;
   date: string;
-  type: 'embauche' | 'promotion' | 'mutation' | 'augmentation' | 'avertissement' | 'fin_essai';
+  type:
+    | 'embauche'
+    | 'promotion'
+    | 'mutation'
+    | 'augmentation'
+    | 'avertissement'
+    | 'fin_essai'
+    | 'nouveau_contrat'
+    | 'avenant';
   description: string;
   previousValue?: string;
   newValue?: string;
   changedBy: string;
+}
+
+export type ContractStatus = 'actif' | 'termine' | 'rompu';
+export type AmendmentType =
+  | 'renouvellement'
+  | 'changement_poste'
+  | 'changement_salaire'
+  | 'changement_departement'
+  | 'prolongation'
+  | 'autre';
+
+export interface ContractAmendment {
+  id: string;
+  type: AmendmentType;
+  effectiveDate: string;
+  description: string;
+  previousValue?: string;
+  newValue?: string;
+  createdBy: string;
+  createdAt: string;
+}
+
+export interface Contract {
+  id: string;
+  employeeId: string;
+  contractNumber?: string;
+  contractType: ContractType;
+  startDate: string;
+  endDate?: string;
+  trialEndDate?: string;
+  position: string;
+  departmentId: string;
+  baseSalary: number;
+  status: ContractStatus;
+  isCurrent: boolean;
+  notes?: string;
+  createdBy: string;
+  createdAt: string;
+  amendments: ContractAmendment[];
 }
 
 export interface OnboardingStatus {
@@ -371,10 +426,17 @@ export interface Payslip {
   smsSentAt?: string;
   // Financial data (denormalized)
   baseSalary: number;
+  overtimeAmount: number;
   salaireBrut: number;
-  salaireNet: number;
   cnssEmployee: number;
+  cnssEmployer: number;
+  cnssEmployeeRate: number; // fraction, ex. 0.055 = 5,5% — dérivé du barème figé sur le cycle
+  cnssEmployerRate: number; // fraction
   iuts: number;
+  iutsBase: number;
+  iutsRate: number; // fraction
+  coutEmployeur: number;
+  salaireNet: number;
   primes: VariableElement[];
   indemnites: VariableElement[];
   avances: VariableElement[];
@@ -421,6 +483,15 @@ export interface LeaveBalance {
   taken: number;
   remaining: number;
   pending: number;
+}
+
+/** Compteur de congés payés (2 j ouvrables/mois de service, cumulés depuis l'embauche). */
+export interface LeaveDashboard {
+  employeeId: string;
+  acquired: number;
+  accruing: number;
+  taken: number;
+  remaining: number;
 }
 
 // ============================================================

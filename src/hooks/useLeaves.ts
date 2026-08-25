@@ -6,6 +6,8 @@ import {
   createLeaveRequest,
   getDepartmentLeaveCalendar,
   getLeaveBalance,
+  getLeaveDashboard,
+  getLeaveDashboardAll,
   getLeaveRequests,
   getTeamLeaveCalendar,
   refuseLeaveRequest,
@@ -23,6 +25,21 @@ export function useLeaveBalanceQuery(employeeId: string | undefined) {
     queryKey: ['leave-balance', employeeId],
     queryFn: () => getLeaveBalance(employeeId!),
     enabled: !!employeeId,
+  });
+}
+
+export function useLeaveDashboardQuery(employeeId: string | undefined) {
+  return useQuery({
+    queryKey: ['leave-dashboard', employeeId],
+    queryFn: () => getLeaveDashboard(employeeId!),
+    enabled: !!employeeId,
+  });
+}
+
+export function useLeaveDashboardAllQuery(departmentId?: string) {
+  return useQuery({
+    queryKey: ['leave-dashboard-all', departmentId],
+    queryFn: () => getLeaveDashboardAll(departmentId),
   });
 }
 
@@ -46,6 +63,8 @@ function useInvalidateLeaves() {
   return () => {
     queryClient.invalidateQueries({ queryKey: ['leave-requests'] });
     queryClient.invalidateQueries({ queryKey: ['leave-balance'] });
+    queryClient.invalidateQueries({ queryKey: ['leave-dashboard'] });
+    queryClient.invalidateQueries({ queryKey: ['leave-dashboard-all'] });
     queryClient.invalidateQueries({ queryKey: ['leave-team-calendar'] });
   };
 }

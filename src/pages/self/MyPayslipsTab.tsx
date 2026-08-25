@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useAuthStore } from '@/store/authStore';
 import { usePayslipsQuery } from '@/hooks/usePayslips';
 import { useCurrentCompanyQuery } from '@/hooks/useCompanies';
+import { useEmployeeQuery } from '@/hooks/useEmployees';
 import { SEND_STATUS_VARIANT } from '@/lib/constants';
 import { formatCurrency, formatPeriod } from '@/lib/utils';
 import { Payslip } from '@/types';
@@ -18,6 +19,7 @@ export function MyPayslipsTab() {
   const [previewing, setPreviewing] = useState<Payslip | null>(null);
 
   const { data: payslips, isLoading } = usePayslipsQuery(user?.employeeId);
+  const { data: employee } = useEmployeeQuery(user?.employeeId);
   const { data: company } = useCurrentCompanyQuery();
   const currencyCode = company?.currencyCode;
   const sorted = user?.employeeId ? [...(payslips ?? [])].sort((a, b) => b.period.localeCompare(a.period)) : [];
@@ -61,7 +63,12 @@ export function MyPayslipsTab() {
       </CardContent>
 
       {previewing && (
-        <PayslipPreviewDialog payslip={previewing} open={!!previewing} onOpenChange={(open) => !open && setPreviewing(null)} />
+        <PayslipPreviewDialog
+          payslip={previewing}
+          employee={employee}
+          open={!!previewing}
+          onOpenChange={(open) => !open && setPreviewing(null)}
+        />
       )}
     </Card>
   );

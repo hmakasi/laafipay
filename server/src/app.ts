@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import './lib/loadEnv.js';
 import express, { NextFunction, Request, Response } from 'express';
 import cors from 'cors';
 import { ZodError } from 'zod';
@@ -8,6 +8,12 @@ import { departmentsRouter } from './routes/departments.routes.js';
 import { companiesRouter } from './routes/companies.routes.js';
 import { usersRouter } from './routes/users.routes.js';
 import { onboardingRouter } from './routes/onboarding.routes.js';
+import { payrollRouter } from './routes/payroll.routes.js';
+import { payslipsRouter } from './routes/payslips.routes.js';
+import { leavesRouter } from './routes/leaves.routes.js';
+import { comptaRouter } from './routes/compta.routes.js';
+import { paymentsRouter } from './routes/payments.routes.js';
+import { treasuryRouter } from './routes/treasury.routes.js';
 import { HttpError } from './lib/errors.js';
 
 const app = express();
@@ -24,6 +30,14 @@ app.use('/api/users', usersRouter);
 app.use('/api/employees', employeesRouter);
 app.use('/api/departments', departmentsRouter);
 app.use('/api/onboarding', onboardingRouter);
+app.use('/api/payroll', payrollRouter);
+app.use('/api/payslips', payslipsRouter);
+app.use('/api/leaves', leavesRouter);
+app.use('/api/payments', paymentsRouter);
+app.use('/api/treasury', treasuryRouter);
+
+// Passerelle LaafiPay -> LaafiCompta
+app.use('/api/compta', comptaRouter);
 
 app.use((req, res) => {
   res.status(404).json({ message: `Route ${req.method} ${req.path} introuvable` });

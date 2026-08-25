@@ -39,18 +39,30 @@ export function AdvancesTab() {
 
   const handleApprove = async (id: string) => {
     if (!user) return;
-    await approveMutation.mutateAsync({ id, approvedBy: user.email });
-    toast.success(t('payments.advances.approved'));
+    try {
+      await approveMutation.mutateAsync({ id, approvedBy: user.email });
+      toast.success(t('payments.advances.approved'));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur lors de l\'approbation');
+    }
   };
 
   const handlePay = async (id: string) => {
-    await payMutation.mutateAsync(id);
-    toast.success(t('payments.advances.paid'));
+    try {
+      await payMutation.mutateAsync(id);
+      toast.success(t('payments.advances.paid'));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur lors du paiement');
+    }
   };
 
   const handleDeduct = async (id: string) => {
-    await deductMutation.mutateAsync(id);
-    toast.success(t('payments.advances.deducted'));
+    try {
+      await deductMutation.mutateAsync(id);
+      toast.success(t('payments.advances.deducted'));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur lors de la déduction');
+    }
   };
 
   return (

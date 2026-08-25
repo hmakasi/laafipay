@@ -14,6 +14,7 @@ import {
 import { useAuthStore } from '@/store/authStore';
 import { getInitials } from '@/lib/utils';
 import { NotificationsMenu } from '@/components/layout/NotificationsMenu';
+import { WorkspaceSwitcher } from '@/components/compta/WorkspaceSwitcher';
 
 export function Topbar() {
   const { t } = useTranslation();
@@ -30,7 +31,7 @@ export function Topbar() {
 
   return (
     <header className="flex h-16 items-center justify-between border-b bg-card px-4 md:px-6">
-      <div />
+      <WorkspaceSwitcher current="paie" />
       <div className="flex items-center gap-2">
         <NotificationsMenu />
         <DropdownMenu>

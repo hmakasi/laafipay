@@ -41,18 +41,22 @@ export function RequestLeaveDialog({ employeeId }: { employeeId: string }) {
 
   const submit = async (values: LeaveRequestFormValues, channel: 'portail' | 'whatsapp') => {
     const daysCount = daysBetween(values.startDate, values.endDate);
-    await createMutation.mutateAsync({
-      employeeId,
-      type: values.type,
-      startDate: values.startDate,
-      endDate: values.endDate,
-      reason: values.reason,
-      daysCount,
-      channel,
-    });
-    toast.success(t('leaves.requestLeave'));
-    form.reset();
-    setOpen(false);
+    try {
+      await createMutation.mutateAsync({
+        employeeId,
+        type: values.type,
+        startDate: values.startDate,
+        endDate: values.endDate,
+        reason: values.reason,
+        daysCount,
+        channel,
+      });
+      toast.success(t('leaves.requestLeave'));
+      form.reset();
+      setOpen(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur lors de la demande de congé');
+    }
   };
 
   return (

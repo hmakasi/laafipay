@@ -21,13 +21,21 @@ export function UsersPage() {
   const toggleActiveMutation = useToggleUserActiveMutation();
 
   const handleRoleChange = async (userId: string, role: UserRole) => {
-    await updateRoleMutation.mutateAsync({ userId, role });
-    toast.success(t('app.save'));
+    try {
+      await updateRoleMutation.mutateAsync({ userId, role });
+      toast.success(t('app.save'));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur lors du changement de rôle');
+    }
   };
 
   const handleToggleActive = async (userId: string, isActive: boolean) => {
-    await toggleActiveMutation.mutateAsync({ userId, isActive: !isActive });
-    toast.success(t('app.save'));
+    try {
+      await toggleActiveMutation.mutateAsync({ userId, isActive: !isActive });
+      toast.success(t('app.save'));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur lors de la mise à jour');
+    }
   };
 
   return (

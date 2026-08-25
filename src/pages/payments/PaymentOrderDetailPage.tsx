@@ -56,26 +56,42 @@ export function PaymentOrderDetailPage() {
 
   const handleApprove = async () => {
     if (!id || !user) return;
-    await approveMutation.mutateAsync({ id, validatedBy: user.email });
-    toast.success(t('payments.approveOrder'));
+    try {
+      await approveMutation.mutateAsync({ id, validatedBy: user.email });
+      toast.success(t('payments.approveOrder'));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur lors de l\'approbation');
+    }
   };
 
   const handleReject = async () => {
     if (!id || !user) return;
-    await rejectMutation.mutateAsync({ id, rejectedBy: user.email });
-    toast.success(t('payments.rejectOrder'));
+    try {
+      await rejectMutation.mutateAsync({ id, rejectedBy: user.email });
+      toast.success(t('payments.rejectOrder'));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur lors du rejet');
+    }
   };
 
   const handleRetry = async () => {
     if (!id) return;
-    await retryMutation.mutateAsync(id);
-    toast.success(t('payments.retryFailed'));
+    try {
+      await retryMutation.mutateAsync(id);
+      toast.success(t('payments.retryFailed'));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur lors de la relance');
+    }
   };
 
   const handleDownload = async () => {
     if (!id || !order) return;
-    const blob = await downloadMutation.mutateAsync(id);
-    downloadBlob(blob, `ordre-paiement-${order.id}.csv`);
+    try {
+      const blob = await downloadMutation.mutateAsync(id);
+      downloadBlob(blob, `ordre-paiement-${order.id}.csv`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur lors de la génération du fichier');
+    }
   };
 
   if (isLoading || !order) {

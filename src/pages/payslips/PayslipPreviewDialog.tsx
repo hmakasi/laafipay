@@ -1,15 +1,16 @@
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Mail, MessageCircle, Smartphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { PermissionGate } from '@/components/auth/PermissionGate';
 import { useSendPayslipMutation } from '@/hooks/usePayslips';
 import { useCurrentCompanyQuery } from '@/hooks/useCompanies';
-import { SEND_STATUS_VARIANT } from '@/lib/constants';
-import { formatCurrency, formatPeriod } from '@/lib/utils';
+import { PayslipOfficialTemplate, PayslipOfficialRow } from '@/components/PayslipOfficialTemplate';
+import { COUNTRY_META, SEND_STATUS_VARIANT } from '@/lib/constants';
+import { formatPeriod } from '@/lib/utils';
 import { Employee, Payslip } from '@/types';
 
 export function PayslipPreviewDialog({
@@ -26,90 +27,116 @@ export function PayslipPreviewDialog({
   const { t } = useTranslation();
   const sendMutation = useSendPayslipMutation();
   const { data: company } = useCurrentCompanyQuery();
-  const currencyCode = company?.currencyCode;
 
   const handleSend = async (channel: 'email' | 'whatsapp' | 'sms') => {
-    await sendMutation.mutateAsync({ id: payslip.id, channel });
-    toast.success(t(`payslips.send${channel === 'email' ? 'Email' : channel === 'whatsapp' ? 'Whatsapp' : 'Sms'}`));
+    try {
+      await sendMutation.mutateAsync({ id: payslip.id, channel });
+      toast.success(t(`payslips.send${channel === 'email' ? 'Email' : channel === 'whatsapp' ? 'Whatsapp' : 'Sms'}`));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur lors de l\'envoi du bulletin');
+    }
   };
 
-  const lines = [
-    ...payslip.primes.map((p) => ({ label: p.label, amount: p.amount, sign: 1 })),
-    ...payslip.indemnites.map((p) => ({ label: p.label, amount: p.amount, sign: 1 })),
-    ...payslip.avances.map((p) => ({ label: p.label, amount: p.amount, sign: -1 })),
-    ...payslip.retenues.map((p) => ({ label: p.label, amount: p.amount, sign: -1 })),
-  ];
+  // Même construction de données que la page "Simuler un bulletin"
+  // (LivePayslipPreviewPage.tsx) — le format et le contenu du bulletin réel
+  // doivent être identiques à ceux de la simulation, y compris les
+  // simplifications qu'elle applique (ex. un seul élément avances/retenues
+  // affiché, iutsBase approximé par salaireBrut - cnssEmployee).
+  const officialTemplateData = useMemo(() => {
+    if (!company) return null;
+    const countryMeta = COUNTRY_META[company.countryCode];
+
+    const earnings: PayslipOfficialRow[] = [
+      { label: t('payroll.livePreview.baseSalary'), employeeAmount: payslip.baseSalary },
+      ...payslip.primes.map((p) => ({ label: p.label, employeeAmount: p.amount })),
+      // Rubriques du catalogue (logement, transport, santé...) activées dans
+      // "Configuration du bulletin" — stockées en indemnites, pas primes.
+      // Leur absence ici faisait qu'un bulletin validé/généré ne montrait
+      // jamais que le salaire de base + CNSS/impôt, même quand ces rubriques
+      // apparaissaient bien sur la ligne de paie (Éléments variables).
+      ...payslip.indemnites.map((i) => ({ label: i.label, employeeAmount: i.amount })),
+      ...(payslip.overtimeAmount > 0
+        ? [{ label: t('payroll.overtimeHours'), employeeAmount: payslip.overtimeAmount }]
+        : []),
+    ];
+
+    const contributions: PayslipOfficialRow[] = [
+      {
+        label: countryMeta.socialAgencyLabel,
+        base: payslip.baseSalary,
+        rate: payslip.cnssEmployeeRate,
+        employeeAmount: -payslip.cnssEmployee,
+        employerAmount: payslip.cnssEmployer,
+      },
+      ...(payslip.avances.length > 0 ? [{ label: t('payroll.avances'), employeeAmount: -payslip.avances[0].amount }] : []),
+      ...(payslip.retenues.length > 0 ? [{ label: t('payroll.retenues'), employeeAmount: -payslip.retenues[0].amount }] : []),
+    ];
+
+    const employeeContributionsTotal =
+      payslip.cnssEmployee + (payslip.avances[0]?.amount ?? 0) + (payslip.retenues[0]?.amount ?? 0);
+
+    return {
+      company: {
+        name: company.name,
+        legalName: company.legalName,
+        addressLine: [company.address, company.postalCode, company.city].filter(Boolean).join(', ') || undefined,
+        taxIdLabel: countryMeta.taxIdLabel,
+        taxIdNumber: company.taxIdNumber,
+        socialAgencyLabel: countryMeta.socialAgencyLabel,
+        socialSecurityNumber: company.socialSecurityNumber,
+        employerNumbersOrder: countryMeta.employerNumbersOrder,
+        activityCode: company.activityCode,
+        collectiveAgreement: company.collectiveAgreement,
+        logo: company.logo,
+      },
+      employee: {
+        fullName: employee ? `${employee.firstName} ${employee.lastName}`.trim() : payslip.employeeId,
+        matricule: employee?.matricule ?? '—',
+        hireDate: employee?.hireDate,
+        address: employee ? [employee.address, employee.city].filter(Boolean).join(', ') : undefined,
+        socialSecurityNumber: employee?.cnssNumber,
+      },
+      period: { label: formatPeriod(payslip.period) },
+      earnings,
+      grossSalary: payslip.salaireBrut,
+      contributions,
+      employeeContributionsTotal,
+      employerContributionsTotal: payslip.cnssEmployer,
+      incomeTax: { label: countryMeta.incomeTaxLabel, base: payslip.iutsBase, rate: payslip.iutsRate, amount: payslip.iuts },
+      netBeforeTax: payslip.salaireBrut - payslip.cnssEmployee,
+      netToPay: payslip.salaireNet,
+      employerCost: payslip.coutEmployeur,
+      currencyCode: company.currencyCode,
+    };
+  }, [company, employee, payslip, t]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-4xl">
         <DialogHeader>
           <DialogTitle className="capitalize">
             {t('payslips.preview')} — {formatPeriod(payslip.period)}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 rounded-md border p-4 text-sm">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <div className="text-xs font-semibold uppercase text-muted-foreground">{t('payslips.employerInfo')}</div>
-              <div className="font-medium">LaafiPay Démo SARL</div>
-              <div className="text-muted-foreground">Ouagadougou, Burkina Faso</div>
-            </div>
-            <div>
-              <div className="text-xs font-semibold uppercase text-muted-foreground">{t('payslips.employeeInfo')}</div>
-              <div className="font-medium">{employee ? `${employee.firstName} ${employee.lastName}` : payslip.employeeId}</div>
-              <div className="text-muted-foreground">{employee?.matricule} · {employee?.position}</div>
-            </div>
-          </div>
+        <div className="max-h-[70vh] overflow-y-auto overflow-x-auto rounded-md border bg-muted/20 p-4">
+          {officialTemplateData ? (
+            <PayslipOfficialTemplate {...officialTemplateData} />
+          ) : (
+            <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">{t('app.loading')}</div>
+          )}
+        </div>
 
-          <Separator />
-
-          <div>
-            <div className="mb-2 text-xs font-semibold uppercase text-muted-foreground">{t('payslips.payDetails')}</div>
-            <div className="space-y-1">
-              <div className="flex justify-between">
-                <span>{t('employees.baseSalary')}</span>
-                <span>{formatCurrency(payslip.baseSalary, currencyCode)}</span>
-              </div>
-              {lines.map((l, i) => (
-                <div key={i} className="flex justify-between text-muted-foreground">
-                  <span>{l.label}</span>
-                  <span>{l.sign > 0 ? '+' : '-'}{formatCurrency(l.amount, currencyCode)}</span>
-                </div>
-              ))}
-              <div className="flex justify-between border-t pt-1 font-medium">
-                <span>{t('payroll.salaireBrut')}</span>
-                <span>{formatCurrency(payslip.salaireBrut, currencyCode)}</span>
-              </div>
-              <div className="flex justify-between text-muted-foreground">
-                <span>{t('payroll.cnssEmployee')}</span>
-                <span>-{formatCurrency(payslip.cnssEmployee, currencyCode)}</span>
-              </div>
-              <div className="flex justify-between text-muted-foreground">
-                <span>{t('payroll.iuts')}</span>
-                <span>-{formatCurrency(payslip.iuts, currencyCode)}</span>
-              </div>
-              <div className="flex justify-between border-t pt-1 text-base font-semibold text-primary">
-                <span>{t('payslips.netToPay')}</span>
-                <span>{formatCurrency(payslip.salaireNet, currencyCode)}</span>
-              </div>
-            </div>
-          </div>
-
-          <Separator />
-
-          <div className="flex flex-wrap items-center gap-3">
-            <Badge variant={SEND_STATUS_VARIANT[payslip.emailStatus]}>
-              E-mail : {t(`payslips.emailStatus_${payslip.emailStatus}`)}
-            </Badge>
-            <Badge variant={SEND_STATUS_VARIANT[payslip.whatsappStatus]}>
-              WhatsApp : {t(`payslips.whatsappStatus_${payslip.whatsappStatus}`)}
-            </Badge>
-            <Badge variant={SEND_STATUS_VARIANT[payslip.smsStatus]}>
-              SMS : {t(`payslips.smsStatus_${payslip.smsStatus}`)}
-            </Badge>
-          </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <Badge variant={SEND_STATUS_VARIANT[payslip.emailStatus]}>
+            E-mail : {t(`payslips.emailStatus_${payslip.emailStatus}`)}
+          </Badge>
+          <Badge variant={SEND_STATUS_VARIANT[payslip.whatsappStatus]}>
+            WhatsApp : {t(`payslips.whatsappStatus_${payslip.whatsappStatus}`)}
+          </Badge>
+          <Badge variant={SEND_STATUS_VARIANT[payslip.smsStatus]}>
+            SMS : {t(`payslips.smsStatus_${payslip.smsStatus}`)}
+          </Badge>
         </div>
 
         <PermissionGate permission="payslips:send">

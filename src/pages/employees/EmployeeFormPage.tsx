@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,6 +20,7 @@ import {
   useUpdateEmployeeMutation,
 } from '@/hooks/useEmployees';
 import { InviteResultDialog } from '@/pages/employees/InviteResultDialog';
+import { CreateDepartmentDialog } from '@/pages/employees/CreateDepartmentDialog';
 import {
   CONTRACT_TYPES,
   EMPLOYEE_STATUSES,
@@ -123,6 +124,7 @@ export function EmployeeFormPage() {
     email?: string;
     link: string;
   } | null>(null);
+  const [createDepartmentOpen, setCreateDepartmentOpen] = useState(false);
 
   const form = useForm<EmployeeFormValues>({
     resolver: zodResolver(employeeSchema),
@@ -188,8 +190,12 @@ export function EmployeeFormPage() {
           navigate(`/employees/${created.id}`);
         }
       }
-    } catch {
-      toast.error(t('app.error'));
+    } catch (err) {
+      // t('app.error') masquait systématiquement la vraie raison du rejet
+      // (ex. matricule déjà utilisé, département invalide) derrière un
+      // message générique "Une erreur est survenue" — impossible de
+      // diagnostiquer un échec de création sans le message réel du serveur.
+      toast.error(err instanceof Error ? err.message : t('app.error'));
     }
   };
 
@@ -309,12 +315,23 @@ export function EmployeeFormPage() {
               <FormField control={form.control} name="departmentId" render={({ field }) => (
                 <FormItem>
                   <FormLabel>{t('employees.department')}</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl><SelectTrigger><SelectValue placeholder={t('employees.filterByDepartment')} /></SelectTrigger></FormControl>
-                    <SelectContent>
-                      {departments?.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex gap-2">
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl><SelectTrigger><SelectValue placeholder={t('employees.filterByDepartment')} /></SelectTrigger></FormControl>
+                      <SelectContent>
+                        {departments?.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      title={t('employees.newDepartment.title')}
+                      onClick={() => setCreateDepartmentOpen(true)}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )} />
@@ -405,6 +422,12 @@ export function EmployeeFormPage() {
           link={inviteResult.link}
         />
       )}
+
+      <CreateDepartmentDialog
+        open={createDepartmentOpen}
+        onOpenChange={setCreateDepartmentOpen}
+        onCreated={(department) => form.setValue('departmentId', department.id, { shouldValidate: true })}
+      />
     </div>
   );
 }

@@ -55,15 +55,23 @@ export function PayslipsListPage() {
 
   const handleGenerate = async () => {
     if (!cycleId) return;
-    await generateMutation.mutateAsync(cycleId);
-    toast.success(t('payslips.generate'));
+    try {
+      await generateMutation.mutateAsync(cycleId);
+      toast.success(t('payslips.generate'));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur lors de la génération des bulletins');
+    }
   };
 
   const handleSendAll = async (channel: 'email' | 'whatsapp' | 'sms') => {
     if (!cycleId) return;
-    await sendAllMutation.mutateAsync({ cycleId, channel });
-    toast.success(t('payslips.sendSelected'));
-    setSelected(new Set());
+    try {
+      await sendAllMutation.mutateAsync({ cycleId, channel });
+      toast.success(t('payslips.sendSelected'));
+      setSelected(new Set());
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur lors de l\'envoi des bulletins');
+    }
   };
 
   const alreadyGenerated = !!payslips?.length;
