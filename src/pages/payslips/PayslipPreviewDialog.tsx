@@ -131,9 +131,14 @@ export function PayslipPreviewDialog({
           <Badge variant={SEND_STATUS_VARIANT[payslip.emailStatus]}>
             E-mail : {t(`payslips.emailStatus_${payslip.emailStatus}`)}
           </Badge>
-          <Badge variant={SEND_STATUS_VARIANT[payslip.whatsappStatus]}>
-            WhatsApp : {t(`payslips.whatsappStatus_${payslip.whatsappStatus}`)}
-          </Badge>
+          <div className="flex flex-col gap-1">
+            <Badge variant={SEND_STATUS_VARIANT[payslip.whatsappStatus]}>
+              WhatsApp : {t(`payslips.whatsappStatus_${payslip.whatsappStatus}`)}
+            </Badge>
+            {payslip.whatsappStatus === 'echoue' && payslip.whatsappError && (
+              <span className="text-xs text-destructive">{payslip.whatsappError}</span>
+            )}
+          </div>
           <Badge variant={SEND_STATUS_VARIANT[payslip.smsStatus]}>
             SMS : {t(`payslips.smsStatus_${payslip.smsStatus}`)}
           </Badge>

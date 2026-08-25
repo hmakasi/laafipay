@@ -424,6 +424,7 @@ export interface Payslip {
   emailSentAt?: string;
   whatsappSentAt?: string;
   smsSentAt?: string;
+  whatsappError?: string;
   // Financial data (denormalized)
   baseSalary: number;
   overtimeAmount: number;

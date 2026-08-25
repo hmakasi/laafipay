@@ -66,8 +66,12 @@ export function PayslipsListPage() {
   const handleSendAll = async (channel: 'email' | 'whatsapp' | 'sms') => {
     if (!cycleId) return;
     try {
-      await sendAllMutation.mutateAsync({ cycleId, channel });
-      toast.success(t('payslips.sendSelected'));
+      const { sent, failed } = await sendAllMutation.mutateAsync({ cycleId, channel });
+      if (failed > 0) {
+        toast.warning(`${sent} bulletin(s) envoyé(s), ${failed} échec(s) — voir le détail par bulletin`);
+      } else {
+        toast.success(t('payslips.sendSelected'));
+      }
       setSelected(new Set());
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erreur lors de l\'envoi des bulletins');

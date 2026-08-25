@@ -541,6 +541,11 @@ model Payslip {
   emailSentAt    DateTime?
   whatsappSentAt DateTime?
   smsSentAt      DateTime?
+  // Détail de l'échec quand whatsappStatus = echoue (ex. message d'erreur
+  // renvoyé par l'API Meta Cloud) — email/sms restent des stubs pour
+  // l'instant, seul WhatsApp a un vrai envoi donc seul WhatsApp a besoin
+  // de tracer pourquoi ça a échoué.
+  whatsappError  String?
   baseSalary     Float
   overtimeAmount Float             @default(0)
   salaireBrut    Float

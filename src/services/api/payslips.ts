@@ -29,6 +29,11 @@ export async function sendPayslipBySms(id: string): Promise<void> {
   return apiClient.post<void>(`/payslips/${id}/send/sms`);
 }
 
-export async function sendAllPayslips(cycleId: string, channel: 'email' | 'whatsapp' | 'sms'): Promise<void> {
-  return apiClient.post<void>(`/payslips/send-all/${cycleId}`, { channel });
+export interface SendAllPayslipsResult {
+  sent: number;
+  failed: number;
+}
+
+export async function sendAllPayslips(cycleId: string, channel: 'email' | 'whatsapp' | 'sms'): Promise<SendAllPayslipsResult> {
+  return apiClient.post<SendAllPayslipsResult>(`/payslips/send-all/${cycleId}`, { channel });
 }
