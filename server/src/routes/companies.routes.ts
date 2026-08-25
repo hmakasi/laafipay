@@ -115,6 +115,16 @@ companiesRouter.post(
       const createdCompany = await tx.company.create({
         data: { name: companyName, countryCode, currencyCode },
       });
+
+      // Initialisation par défaut de la configuration paie
+      await tx.payrollConfig.create({
+        data: {
+          company: { connect: { id: createdCompany.id } },
+          activeRubrics: [],
+          customRubrics: [],
+        },
+      });
+
       return tx.user.create({
         data: {
           companyId: createdCompany.id,
