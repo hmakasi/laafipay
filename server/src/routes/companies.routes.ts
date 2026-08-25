@@ -1,5 +1,8 @@
+import fs from 'fs';
+import path from 'path';
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
+import multer from 'multer';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
@@ -8,6 +11,39 @@ import { authenticate, authorize, signToken } from '../middleware/auth.js';
 import { HttpError, NotFoundError } from '../lib/errors.js';
 
 export const companiesRouter = Router();
+
+// Écrit directement dans le dossier que `app.use('/uploads', express.static('uploads'))`
+// sert réellement — contrairement à l'upload de documents employé
+// (employees.routes.ts), qui écrit dans os.tmpdir() alors qu'Express sert
+// depuis ./uploads : ses URLs renvoyées sont des liens morts, y compris en
+// local. Ici le fichier est immédiatement accessible à l'URL renvoyée.
+// ⚠️ Ne fonctionnera pas sur le déploiement Vercel actuel : le système de
+// fichiers y est en lecture seule hors /tmp, et /tmp n'y est ni servi ni
+// persistant entre invocations. Un vrai stockage objet (Supabase Storage,
+// Vercel Blob...) sera nécessaire avant la mise en production de cette
+// fonctionnalité — même limite que les documents employé, non résolue ici.
+const LOGO_UPLOAD_DIR = path.join(process.cwd(), 'uploads', 'logos');
+const logoStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    fs.mkdirSync(LOGO_UPLOAD_DIR, { recursive: true });
+    cb(null, LOGO_UPLOAD_DIR);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname) || '.png';
+    cb(null, `${req.user!.companyId}-${Date.now()}${ext}`);
+  },
+});
+const logoUpload = multer({
+  storage: logoStorage,
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2 Mo
+  fileFilter: (_req, file, cb) => {
+    if (!/^image\/(png|jpe?g|svg\+xml|webp)$/.test(file.mimetype)) {
+      cb(new HttpError(400, 'Format non supporté (PNG, JPG, SVG ou WEBP uniquement)'));
+      return;
+    }
+    cb(null, true);
+  },
+});
 
 const COUNTRY_CODES = ['BF', 'BJ', 'CD'] as const;
 const CURRENCY_CODES = ['XOF', 'CDF', 'USD'] as const;
@@ -46,7 +82,10 @@ function toCompanyDTO(c: {
   ifu: string | null;
   rccm: string | null;
   address: string | null;
+  postalCode: string | null;
   city: string | null;
+  activityCode: string | null;
+  collectiveAgreement: string | null;
   countryCode: string;
   currencyCode: string;
   phone: string | null;
@@ -58,15 +97,21 @@ function toCompanyDTO(c: {
     id: c.id,
     name: c.name,
     legalName: c.legalName ?? undefined,
-    ifu: c.ifu ?? undefined,
+    // ifu/cnssNumber (colonnes DB historiques, nommées avant le moteur
+    // multi-pays) exposées sous leur nom générique côté API — c.types/index.ts
+    // Company.taxIdNumber / socialSecurityNumber, jamais ifu/cnssNumber.
+    taxIdNumber: c.ifu ?? undefined,
     rccm: c.rccm ?? undefined,
     address: c.address ?? undefined,
+    postalCode: c.postalCode ?? undefined,
     city: c.city ?? undefined,
+    activityCode: c.activityCode ?? undefined,
+    collectiveAgreement: c.collectiveAgreement ?? undefined,
     countryCode: c.countryCode,
     currencyCode: c.currencyCode,
     phone: c.phone ?? undefined,
     email: c.email ?? undefined,
-    cnssNumber: c.cnssNumber ?? undefined,
+    socialSecurityNumber: c.cnssNumber ?? undefined,
     logo: c.logo ?? undefined,
   };
 }
@@ -126,19 +171,24 @@ companiesRouter.get(
   })
 );
 
+// Noms de champs alignés sur l'API (taxIdNumber/socialSecurityNumber), pas
+// sur les colonnes DB historiques (ifu/cnssNumber) — voir toCompanyDTO.
 const updateCompanySchema = z.object({
   name: z.string().min(1).optional(),
   legalName: z.string().optional(),
-  ifu: z.string().optional(),
+  taxIdNumber: z.string().optional(),
   rccm: z.string().optional(),
   address: z.string().optional(),
+  postalCode: z.string().optional(),
   city: z.string().optional(),
+  activityCode: z.string().optional(),
+  collectiveAgreement: z.string().optional(),
   // countryCode/currencyCode volontairement absents ici : les changer après
   // coup rouvrirait la question des paies déjà calculées dans l'ancienne
   // devise/juridiction — hors périmètre de cette mise à jour de profil.
   phone: z.string().optional(),
   email: z.string().email().optional(),
-  cnssNumber: z.string().optional(),
+  socialSecurityNumber: z.string().optional(),
   logo: z.string().optional(),
 });
 
@@ -147,8 +197,27 @@ companiesRouter.patch(
   authenticate,
   authorize('settings:write'),
   asyncHandler(async (req, res) => {
-    const data = updateCompanySchema.parse(req.body);
-    const company = await prisma.company.update({ where: { id: req.user!.companyId }, data });
+    const { taxIdNumber, socialSecurityNumber, ...rest } = updateCompanySchema.parse(req.body);
+    const company = await prisma.company.update({
+      where: { id: req.user!.companyId },
+      data: { ...rest, ifu: taxIdNumber, cnssNumber: socialSecurityNumber },
+    });
+    res.json(toCompanyDTO(company));
+  })
+);
+
+companiesRouter.post(
+  '/me/logo',
+  authenticate,
+  authorize('settings:write'),
+  logoUpload.single('logo'),
+  asyncHandler(async (req, res) => {
+    if (!req.file) throw new HttpError(400, 'Fichier logo manquant');
+    const logo = `/uploads/logos/${req.file.filename}`;
+    const company = await prisma.company.update({
+      where: { id: req.user!.companyId },
+      data: { logo },
+    });
     res.json(toCompanyDTO(company));
   })
 );
@@ -188,7 +257,11 @@ companiesRouter.put(
     const data = payrollConfigSchema.parse(req.body);
     const config = await prisma.payrollConfig.upsert({
       where: { companyId: req.user!.companyId },
-      create: { companyId: req.user!.companyId, ...data },
+      create: {
+        company: { connect: { id: req.user!.companyId } },
+        activeRubrics: data.activeRubrics,
+        customRubrics: data.customRubrics,
+      },
       update: data,
     });
     res.json({ activeRubrics: config.activeRubrics, customRubrics: config.customRubrics });
