@@ -108,21 +108,27 @@ companiesRouter.post(
 
     const passwordHash = await bcrypt.hash(admin.password, 10);
 
-    const user = await prisma.$transaction(async (tx) => {
-      const createdCompany = await tx.company.create({
-        data: { name: companyName, countryCode, currencyCode },
-      });
+    // Pas de `$transaction(async (tx) => ...)` ici : une transaction
+    // interactive garde une session ouverte entre deux requêtes, ce que le
+    // pooler Supabase (PgBouncer en mode transaction, voir DATABASE_URL)
+    // ne supporte pas de façon fiable en prod — ça plantait systématiquement
+    // (500 générique) alors que ça marchait en local contre Postgres direct.
+    // Deux créations indépendantes à la place : l'id de la société est
+    // généré ici pour que la seconde requête n'ait pas besoin du résultat
+    // de la première dans la même session.
+    const createdCompany = await prisma.company.create({
+      data: { name: companyName, countryCode, currencyCode },
+    });
 
-      return tx.user.create({
-        data: {
-          companyId: createdCompany.id,
-          firstName: admin.firstName,
-          lastName: admin.lastName,
-          email: admin.email,
-          passwordHash,
-          role: 'admin',
-        },
-      });
+    const user = await prisma.user.create({
+      data: {
+        companyId: createdCompany.id,
+        firstName: admin.firstName,
+        lastName: admin.lastName,
+        email: admin.email,
+        passwordHash,
+        role: 'admin',
+      },
     });
 
     const token = signToken({
