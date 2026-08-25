@@ -80,9 +80,6 @@ function toCompanyDTO(c: any) {
     id: c.id,
     name: c.name,
     legalName: c.legalName ?? undefined,
-    // ifu/cnssNumber (colonnes DB historiques, nommées avant le moteur
-    // multi-pays) exposées sous leur nom générique côté API — c.types/index.ts
-    // Company.taxIdNumber / socialSecurityNumber, jamais ifu/cnssNumber.
     taxIdNumber: c.ifu ?? undefined,
     rccm: c.rccm ?? undefined,
     address: c.address ?? undefined,
@@ -116,15 +113,6 @@ companiesRouter.post(
         data: { name: companyName, countryCode, currencyCode },
       });
 
-      // Initialisation par défaut de la configuration paie
-      await tx.payrollConfig.create({
-        data: {
-          company: { connect: { id: createdCompany.id } },
-          activeRubrics: [],
-          customRubrics: [],
-        },
-      });
-
       return tx.user.create({
         data: {
           companyId: createdCompany.id,
@@ -152,11 +140,6 @@ companiesRouter.post(
 companiesRouter.get(
   '/me',
   authenticate,
-  // Pas de authorize('settings:read') ici : le nom/pays/devise de l'entreprise
-  // n'est pas une donnée de réglage privilégiée, c'est un contexte d'affichage
-  // dont TOUS les rôles ont besoin (ex. formater les montants du tableau de
-  // bord dans la bonne devise). Seule la modification (PATCH ci-dessous) doit
-  // rester réservée à settings:write.
   asyncHandler(async (req, res) => {
     const company = await prisma.company.findUnique({ where: { id: req.user!.companyId } });
     if (!company) throw new NotFoundError('Entreprise introuvable');
@@ -164,8 +147,6 @@ companiesRouter.get(
   })
 );
 
-// Noms de champs alignés sur l'API (taxIdNumber/socialSecurityNumber), pas
-// sur les colonnes DB historiques (ifu/cnssNumber) — voir toCompanyDTO.
 const updateCompanySchema = z.object({
   name: z.string().min(1).optional(),
   legalName: z.string().optional(),
@@ -176,9 +157,6 @@ const updateCompanySchema = z.object({
   city: z.string().optional(),
   activityCode: z.string().optional(),
   collectiveAgreement: z.string().optional(),
-  // countryCode/currencyCode volontairement absents ici : les changer après
-  // coup rouvrirait la question des paies déjà calculées dans l'ancienne
-  // devise/juridiction — hors périmètre de cette mise à jour de profil.
   phone: z.string().optional(),
   email: z.string().email().optional(),
   socialSecurityNumber: z.string().optional(),
@@ -215,7 +193,6 @@ companiesRouter.post(
   })
 );
 
-// Rubriques de bulletin (PayrollComponentsSetup.tsx).
 const customRubricSchema = z.object({
   label: z.string().min(1),
   taxable: z.boolean(),
@@ -232,8 +209,6 @@ const EMPTY_PAYROLL_CONFIG = { activeRubrics: [] as string[], customRubrics: [] 
 companiesRouter.get(
   '/payroll-config',
   authenticate,
-  // Comme /me : lecture ouverte à tous les rôles authentifiés, ce n'est
-  // qu'un réglage d'affichage des bulletins, pas une donnée sensible.
   asyncHandler(async (req, res) => {
     const config = await prisma.payrollConfig.findUnique({ where: { companyId: req.user!.companyId } });
     res.json(
