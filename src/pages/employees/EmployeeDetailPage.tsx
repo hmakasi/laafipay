@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { ArrowLeft, Download, Pencil, Trash2, Upload } from 'lucide-react';
+import { ArrowLeft, Download, Pencil, Trash2, Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -22,7 +22,13 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { PermissionGate } from '@/components/auth/PermissionGate';
-import { useDeleteEmployeeMutation, useDepartmentsQuery, useEmployeeQuery, useUploadDocumentMutation } from '@/hooks/useEmployees';
+import {
+  useDeleteDocumentMutation,
+  useDeleteEmployeeMutation,
+  useDepartmentsQuery,
+  useEmployeeQuery,
+  useUploadDocumentMutation,
+} from '@/hooks/useEmployees';
 import { useEmployeeContractsQuery } from '@/hooks/useContracts';
 import { useCurrentCompanyQuery } from '@/hooks/useCompanies';
 import { downloadDocument } from '@/services/api/employees';
@@ -61,6 +67,7 @@ export function EmployeeDetailPage() {
   const currencyCode = company?.currencyCode;
   const deleteMutation = useDeleteEmployeeMutation();
   const uploadDocumentMutation = useUploadDocumentMutation();
+  const deleteDocumentMutation = useDeleteDocumentMutation();
   const documentInputRef = useRef<HTMLInputElement>(null);
   const [documentType, setDocumentType] = useState<EmployeeDocument['type']>('autre');
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
@@ -86,6 +93,17 @@ export function EmployeeDetailPage() {
       toast.error(err instanceof Error ? err.message : 'Erreur lors du téléchargement');
     } finally {
       setDownloadingId(null);
+    }
+  };
+
+  const handleDeleteDocument = async (doc: EmployeeDocument) => {
+    if (!id) return;
+    if (!window.confirm(`Supprimer « ${doc.name} » ? Cette action est irréversible.`)) return;
+    try {
+      await deleteDocumentMutation.mutateAsync({ employeeId: id, documentId: doc.id });
+      toast.success('Document supprimé');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur lors de la suppression du document');
     }
   };
 
@@ -350,6 +368,17 @@ export function EmployeeDetailPage() {
                           <Download className="mr-2 h-4 w-4" />
                           Télécharger
                         </Button>
+                        <PermissionGate permission="employees:write">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            disabled={deleteDocumentMutation.isPending}
+                            onClick={() => handleDeleteDocument(doc)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </PermissionGate>
                       </div>
                     </li>
                   ))}

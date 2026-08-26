@@ -60,6 +60,10 @@ export async function downloadDocument(documentUrl: string): Promise<Blob> {
   return apiClient.getBlob(documentUrl);
 }
 
+export async function deleteDocument(employeeId: string, documentId: string): Promise<void> {
+  return apiClient.delete<void>(`/employees/${employeeId}/documents/${documentId}`);
+}
+
 export async function inviteEmployee(employeeId: string): Promise<{ token: string }> {
   return apiClient.post<{ token: string }>(`/employees/${employeeId}/invite`);
 }

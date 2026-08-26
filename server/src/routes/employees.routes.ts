@@ -3,7 +3,7 @@ import { Readable } from 'stream';
 import path from 'path';
 import { Router } from 'express';
 import multer from 'multer';
-import { put, get } from '@vercel/blob';
+import { put, get, del } from '@vercel/blob';
 import { z } from 'zod';
 import { AmendmentType, CareerEventType, Contract, ContractAmendment, DocumentType, Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
@@ -433,6 +433,26 @@ employeesRouter.get(
     res.setHeader('Content-Type', blob.blob.contentType || 'application/octet-stream');
     res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(doc.name)}"`);
     Readable.fromWeb(blob.stream).pipe(res);
+  })
+);
+
+employeesRouter.delete(
+  '/:id/documents/:documentId',
+  authorize('employees:write'),
+  asyncHandler(async (req, res) => {
+    const employee = await prisma.employee.findFirst({
+      where: { id: req.params.id, companyId: req.user!.companyId },
+    });
+    if (!employee) throw new NotFoundError(`Employé ${req.params.id} introuvable`);
+
+    const doc = await prisma.employeeDocument.findFirst({
+      where: { id: req.params.documentId, employeeId: employee.id },
+    });
+    if (!doc) throw new NotFoundError(`Document ${req.params.documentId} introuvable`);
+
+    await del(doc.url, { token: process.env.DOCUMENTS_BLOB_READ_WRITE_TOKEN });
+    await prisma.employeeDocument.delete({ where: { id: doc.id } });
+    res.status(204).send();
   })
 );
 

@@ -3,6 +3,7 @@ import { Employee, EmployeeDocument, FilterParams } from '@/types';
 import {
   createDepartment,
   createEmployee,
+  deleteDocument,
   deleteEmployee,
   getDepartments,
   getEmployee,
@@ -77,6 +78,17 @@ export function useUploadDocumentMutation() {
   return useMutation({
     mutationFn: ({ employeeId, file, type }: { employeeId: string; file: File; type: EmployeeDocument['type'] }) =>
       uploadDocument(employeeId, file, type),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['employees', variables.employeeId] });
+    },
+  });
+}
+
+export function useDeleteDocumentMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ employeeId, documentId }: { employeeId: string; documentId: string }) =>
+      deleteDocument(employeeId, documentId),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['employees', variables.employeeId] });
     },
