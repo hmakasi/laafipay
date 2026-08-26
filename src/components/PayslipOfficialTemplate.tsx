@@ -109,12 +109,12 @@ export function PayslipOfficialTemplate({
     <div className="mx-auto min-h-[297mm] w-[210mm] bg-white p-8 font-sans text-[10px] leading-tight text-black">
       {/* 1. Bandeau supérieur */}
       <div className="flex items-center justify-between border-b-2 border-primary pb-2">
-        <h1 className="text-base font-bold uppercase">Bulletin de paye</h1>
         {company.logo ? (
           <img src={resolveUploadUrl(company.logo)} alt={company.name} className="h-10 max-w-[120px] object-contain" />
         ) : (
           <div className="h-10 w-[120px] border border-dashed border-slate-300" aria-hidden="true" />
         )}
+        <h1 className="text-base font-bold uppercase">Bulletin de paye</h1>
       </div>
 
       {/* Bloc employeur (gauche) / salarié + période (droite) */}
