@@ -5,6 +5,7 @@ import { asyncHandler } from '../lib/asyncHandler.js';
 import { authorizeComptaApiKey } from '../middleware/comptaAuth.js';
 import { authenticate, authorize } from '../middleware/auth.js';
 import { NotFoundError } from '../lib/errors.js';
+import { FISCAL_DEADLINE_RULES, nextOccurrence, severityForDueDate } from '../lib/fiscalCalendar.js';
 
 export const comptaRouter = Router();
 
@@ -191,5 +192,57 @@ comptaRouter.patch(
       paymentValidatedAt: updated.paymentValidatedAt?.toISOString() ?? null,
       paymentValidatedBy: updated.paymentValidatedBy,
     });
+  })
+);
+
+// ── Copilote Fiscal — échéances réelles ─────────────────────────
+// Calendrier fixe par pays (voir lib/fiscalCalendar.ts) ; les montants
+// estimés des échéances liées à la paie (IUTS/IPTS/IPR, CNSS) sont
+// calculés depuis le dernier cycle de paie réellement validé de
+// l'entreprise, pas inventés. Une échéance dont l'entreprise n'a pas
+// encore de cycle validé (ou dont le pays n'a pas de source de montant,
+// ex. TVA) n'affiche pas de montant plutôt qu'un chiffre fictif.
+comptaRouter.get(
+  '/fiscal-deadlines',
+  authenticate,
+  authorize('payroll:read'),
+  asyncHandler(async (req, res) => {
+    const companyId = req.user!.companyId;
+    const company = await prisma.company.findUnique({ where: { id: companyId }, select: { countryCode: true } });
+    if (!company) throw new NotFoundError(`Entreprise ${companyId} introuvable`);
+
+    const rules = FISCAL_DEADLINE_RULES.filter((r) => r.countryCode === company.countryCode);
+
+    const latestCycle = await prisma.payrollCycle.findFirst({
+      where: { companyId, status: { in: ['valide', 'paye'] } },
+      orderBy: { period: 'desc' },
+      include: { entries: { select: { iuts: true, cnssEmployee: true, cnssEmployer: true } } },
+    });
+
+    const amountBySource = latestCycle
+      ? {
+          iuts: latestCycle.entries.reduce((sum, e) => sum + e.iuts, 0),
+          cnss: latestCycle.entries.reduce((sum, e) => sum + e.cnssEmployee + e.cnssEmployer, 0),
+        }
+      : null;
+
+    const today = new Date();
+    const deadlines = rules
+      .map((rule) => {
+        const dueDate = nextOccurrence(rule.dayOfMonth, today);
+        return {
+          id: rule.id,
+          countryCode: rule.countryCode,
+          label: rule.label,
+          organisme: rule.organisme,
+          dueDate: dueDate.toISOString().slice(0, 10),
+          severity: severityForDueDate(dueDate, today),
+          montantEstime: rule.amountSource && amountBySource ? amountBySource[rule.amountSource] : undefined,
+          basePeriod: rule.amountSource && amountBySource ? latestCycle!.period : undefined,
+        };
+      })
+      .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+
+    res.json(deadlines);
   })
 );

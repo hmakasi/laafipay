@@ -1,6 +1,5 @@
 import {
   ExpenseApprovalRequest,
-  FiscalDeadline,
   LegalStatementTemplate,
   TreasurySalesPurchasesPoint,
   WhatsAppDocument,
@@ -116,14 +115,10 @@ export const mockExpenseApprovals: ExpenseApprovalRequest[] = [
 // ============================================================
 // Copilote Fiscal & Social SYSCOHADA
 // ============================================================
-
-export const mockFiscalDeadlines: FiscalDeadline[] = [
-  { id: 'dl_1', countryCode: 'BF', label: 'Déclaration et paiement IUTS', organisme: 'DGI', dueDate: '2026-09-10', severity: 'critical', montantEstime: 1_664_500 },
-  { id: 'dl_2', countryCode: 'BF', label: 'Cotisations CNSS', organisme: 'CNSS', dueDate: '2026-09-15', severity: 'warning', montantEstime: 4_912_600 },
-  { id: 'dl_3', countryCode: 'BJ', label: 'Déclaration IPTS', organisme: 'DGI Bénin', dueDate: '2026-09-12', severity: 'warning', montantEstime: 612_000 },
-  { id: 'dl_4', countryCode: 'CD', label: 'Déclaration IPR', organisme: 'DGI RDC', dueDate: '2026-09-07', severity: 'critical', montantEstime: 890 },
-  { id: 'dl_5', countryCode: 'BF', label: 'TVA — déclaration mensuelle', organisme: 'DGI', dueDate: '2026-09-20', severity: 'info', montantEstime: 2_180_000 },
-];
+// Les échéances fiscales (IUTS/IPTS/IPR, CNSS, TVA) sont maintenant
+// branchées sur de vraies données serveur — voir server/src/lib/fiscalCalendar.ts
+// et GET /api/compta/fiscal-deadlines. Seule la génération de bilans légaux
+// reste mockée ci-dessous (nécessite un grand livre complet, non construit).
 
 export const mockLegalStatementTemplates: LegalStatementTemplate[] = [
   { type: 'bilan', label: 'Bilan', description: 'Situation patrimoniale SYSCOHADA (actif / passif)' },

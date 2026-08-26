@@ -93,6 +93,10 @@ export interface FiscalDeadline {
   dueDate: string;
   severity: DeadlineSeverity;
   montantEstime?: number;
+  // Période du cycle de paie réel dont montantEstime a été calculé (absent
+  // si l'échéance n'a pas de source de montant, ex. TVA, ou si l'entreprise
+  // n'a encore aucun cycle validé).
+  basePeriod?: string;
 }
 
 export type LegalStatementType = 'bilan' | 'compte_resultat' | 'tafire' | 'balance_generale';

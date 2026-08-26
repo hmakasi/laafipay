@@ -3,8 +3,10 @@ import { AlertTriangle, FileBarChart, ShieldAlert } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { mockFiscalDeadlines, mockLegalStatementTemplates } from '@/mocks/compta';
+import { mockLegalStatementTemplates } from '@/mocks/compta';
+import { useFiscalDeadlinesQuery } from '@/hooks/useFiscalDeadlines';
 import type { ComptaCountryCode, DeadlineSeverity } from '@/types/compta';
 
 const COUNTRY_FLAG: Record<ComptaCountryCode, string> = { BF: '🇧🇫', BJ: '🇧🇯', CD: '🇨🇩' };
@@ -17,7 +19,8 @@ const SEVERITY_VARIANT: Record<DeadlineSeverity, 'destructive' | 'warning' | 'ac
 
 export function CopiloteFiscalWidget() {
   const today = new Date();
-  const sorted = [...mockFiscalDeadlines].sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+  const { data: deadlines, isLoading } = useFiscalDeadlinesQuery();
+  const sorted = [...(deadlines ?? [])].sort((a, b) => a.dueDate.localeCompare(b.dueDate));
 
   return (
     <Card>
@@ -35,6 +38,14 @@ export function CopiloteFiscalWidget() {
 
       <CardContent className="space-y-4">
         <div className="space-y-2">
+          {isLoading ? (
+            <>
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </>
+          ) : sorted.length === 0 ? (
+            <p className="py-4 text-center text-sm text-muted-foreground">Aucune échéance connue pour le pays de l'entreprise.</p>
+          ) : null}
           {sorted.map((dl) => {
             const days = differenceInDays(parseISO(dl.dueDate), today);
             return (
@@ -44,7 +55,9 @@ export function CopiloteFiscalWidget() {
                   <div className="font-medium">{dl.label}</div>
                   <div className="text-xs text-muted-foreground">
                     {dl.organisme} · échéance {formatDate(dl.dueDate)}
-                    {dl.montantEstime !== undefined && ` · ${formatCurrency(dl.montantEstime)} est.`}
+                    {dl.montantEstime !== undefined
+                      ? ` · ${formatCurrency(dl.montantEstime)} est.${dl.basePeriod ? ` (cycle ${dl.basePeriod})` : ''}`
+                      : ' · montant non calculable pour l\'instant'}
                   </div>
                 </div>
                 <Badge variant={SEVERITY_VARIANT[dl.severity]} className="shrink-0">
