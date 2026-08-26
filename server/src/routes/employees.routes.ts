@@ -1,24 +1,31 @@
 import { randomBytes } from 'crypto';
-import os from 'os';
+import { Readable } from 'stream';
 import path from 'path';
 import { Router } from 'express';
 import multer from 'multer';
+import { put, get } from '@vercel/blob';
 import { z } from 'zod';
 import { AmendmentType, CareerEventType, Contract, ContractAmendment, DocumentType, Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { toEmployeeDTO } from '../lib/dto.js';
 import { authenticate, authorize } from '../middleware/auth.js';
-import { ForbiddenError, NotFoundError } from '../lib/errors.js';
+import { ForbiddenError, HttpError, NotFoundError } from '../lib/errors.js';
 import { hasPermission } from '../lib/permissions.js';
 
 export const employeesRouter = Router();
 employeesRouter.use(authenticate);
 
-// os.tmpdir() : seul répertoire inscriptible en serverless (Vercel). Non persistant entre
-// invocations — un vrai stockage objet (Supabase Storage / Vercel Blob) sera nécessaire
-// pour conserver les fichiers uploadés en production.
-const upload = multer({ dest: path.join(os.tmpdir(), 'laafipay-documents') });
+// Stocké sur Vercel Blob (accès privé — pièces d'identité, diplômes,
+// contrats...) plutôt que sur disque : le système de fichiers de Vercel
+// est en lecture seule hors /tmp, et /tmp n'y est ni servi ni persistant
+// entre invocations (même limite déjà corrigée pour le logo d'entreprise,
+// voir companies.routes.ts). En mémoire ici (memoryStorage), le buffer
+// part directement vers Blob sans jamais toucher le disque. Contrairement
+// au logo, l'accès est privé : le fichier n'est jamais exposé par une URL
+// publique, seulement via GET /:id/documents/:documentId/download (voir
+// plus bas), qui vérifie les mêmes permissions que la fiche employé.
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } }); // 10 Mo
 
 const include = { documents: true, careerHistory: true };
 
@@ -378,12 +385,18 @@ employeesRouter.post(
     const requestedType = req.body.type as DocumentType | undefined;
     const type: DocumentType = requestedType && validTypes.includes(requestedType) ? requestedType : 'autre';
 
+    const ext = path.extname(req.file.originalname);
+    const blob = await put(`documents/${employee.id}-${Date.now()}${ext}`, req.file.buffer, {
+      access: 'private',
+      contentType: req.file.mimetype,
+    });
+
     const doc = await prisma.employeeDocument.create({
       data: {
         employeeId: employee.id,
         type,
         name: req.file.originalname,
-        url: `/uploads/documents/${req.file.filename}`,
+        url: blob.url,
         size: req.file.size,
       },
     });
@@ -392,9 +405,33 @@ employeesRouter.post(
       type: doc.type,
       name: doc.name,
       uploadedAt: doc.uploadedAt.toISOString(),
-      url: doc.url,
+      url: `/employees/${employee.id}/documents/${doc.id}/download`,
       size: doc.size,
     });
+  })
+);
+
+employeesRouter.get(
+  '/:id/documents/:documentId/download',
+  authorize('employees:read'),
+  asyncHandler(async (req, res) => {
+    const employee = await prisma.employee.findFirst({
+      where: { id: req.params.id, companyId: req.user!.companyId },
+    });
+    if (!employee) throw new NotFoundError(`Employé ${req.params.id} introuvable`);
+
+    const doc = await prisma.employeeDocument.findFirst({
+      where: { id: req.params.documentId, employeeId: employee.id },
+    });
+    if (!doc) throw new NotFoundError(`Document ${req.params.documentId} introuvable`);
+
+    const blob = await get(doc.url, { access: 'private' });
+    if (!blob) throw new NotFoundError('Fichier introuvable dans le stockage');
+    if (blob.statusCode !== 200) throw new HttpError(502, 'Échec de la récupération du fichier');
+
+    res.setHeader('Content-Type', blob.blob.contentType || 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(doc.name)}"`);
+    Readable.fromWeb(blob.stream).pipe(res);
   })
 );
 

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Employee, FilterParams } from '@/types';
+import { Employee, EmployeeDocument, FilterParams } from '@/types';
 import {
   createDepartment,
   createEmployee,
@@ -9,6 +9,7 @@ import {
   getEmployees,
   inviteEmployee,
   updateEmployee,
+  uploadDocument,
 } from '@/services/api/employees';
 
 export function useEmployeesQuery(params?: FilterParams) {
@@ -68,6 +69,17 @@ export function useUpdateEmployeeMutation() {
 export function useInviteEmployeeMutation() {
   return useMutation({
     mutationFn: (employeeId: string) => inviteEmployee(employeeId),
+  });
+}
+
+export function useUploadDocumentMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ employeeId, file, type }: { employeeId: string; file: File; type: EmployeeDocument['type'] }) =>
+      uploadDocument(employeeId, file, type),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['employees', variables.employeeId] });
+    },
   });
 }
 

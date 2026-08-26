@@ -46,10 +46,18 @@ export async function getAllEmployees(): Promise<Employee[]> {
   return data;
 }
 
-export async function uploadDocument(employeeId: string, file: File): Promise<EmployeeDocument> {
+export async function uploadDocument(employeeId: string, file: File, type: EmployeeDocument['type']): Promise<EmployeeDocument> {
   const formData = new FormData();
   formData.append('file', file);
+  formData.append('type', type);
   return apiClient.post<EmployeeDocument>(`/employees/${employeeId}/documents`, formData);
+}
+
+// doc.url est un chemin API relatif (/employees/:id/documents/:id/download),
+// pas une URL de fichier statique — le document est stocké en privé sur
+// Vercel Blob, il faut passer par cette route authentifiée pour le lire.
+export async function downloadDocument(documentUrl: string): Promise<Blob> {
+  return apiClient.getBlob(documentUrl);
 }
 
 export async function inviteEmployee(employeeId: string): Promise<{ token: string }> {

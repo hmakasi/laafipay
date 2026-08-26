@@ -66,12 +66,15 @@ export function toEmployeeDTO(e: EmployeeWithRelations) {
     cnssNumber: e.cnssNumber ?? undefined,
     iutsCategory: e.iutsCategory,
     avatar: e.avatar ?? undefined,
+    // d.url stocke l'URL Blob privée (usage serveur uniquement, via
+    // GET .../documents/:id/download) — jamais exposée telle quelle au
+    // frontend, qui n'a pas les credentials pour la lire directement.
     documents: (e.documents ?? []).map((d) => ({
       id: d.id,
       type: d.type,
       name: d.name,
       uploadedAt: d.uploadedAt.toISOString(),
-      url: d.url,
+      url: `/employees/${e.id}/documents/${d.id}/download`,
       size: d.size,
     })),
     careerHistory: (e.careerHistory ?? []).map((c) => ({
