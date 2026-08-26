@@ -389,6 +389,7 @@ employeesRouter.post(
     const blob = await put(`documents/${employee.id}-${Date.now()}${ext}`, req.file.buffer, {
       access: 'private',
       contentType: req.file.mimetype,
+      token: process.env.DOCUMENTS_BLOB_READ_WRITE_TOKEN,
     });
 
     const doc = await prisma.employeeDocument.create({
@@ -425,7 +426,7 @@ employeesRouter.get(
     });
     if (!doc) throw new NotFoundError(`Document ${req.params.documentId} introuvable`);
 
-    const blob = await get(doc.url, { access: 'private' });
+    const blob = await get(doc.url, { access: 'private', token: process.env.DOCUMENTS_BLOB_READ_WRITE_TOKEN });
     if (!blob) throw new NotFoundError('Fichier introuvable dans le stockage');
     if (blob.statusCode !== 200) throw new HttpError(502, 'Échec de la récupération du fichier');
 
