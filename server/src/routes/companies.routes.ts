@@ -1,8 +1,8 @@
-import fs from 'fs';
 import path from 'path';
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import multer from 'multer';
+import { put } from '@vercel/blob';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
@@ -12,29 +12,15 @@ import { HttpError, NotFoundError } from '../lib/errors.js';
 
 export const companiesRouter = Router();
 
-// Écrit directement dans le dossier que `app.use('/uploads', express.static('uploads'))`
-// sert réellement — contrairement à l'upload de documents employé
-// (employees.routes.ts), qui écrit dans os.tmpdir() alors qu'Express sert
-// depuis ./uploads : ses URLs renvoyées sont des liens morts, y compris en
-// local. Ici le fichier est immédiatement accessible à l'URL renvoyée.
-// ⚠️ Ne fonctionnera pas sur le déploiement Vercel actuel : le système de
-// fichiers y est en lecture seule hors /tmp, et /tmp n'y est ni servi ni
-// persistant entre invocations. Un vrai stockage objet (Supabase Storage,
-// Vercel Blob...) sera nécessaire avant la mise en production de cette
-// fonctionnalité — même limite que les documents employé, non résolue ici.
-const LOGO_UPLOAD_DIR = path.join(process.cwd(), 'uploads', 'logos');
-const logoStorage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    fs.mkdirSync(LOGO_UPLOAD_DIR, { recursive: true });
-    cb(null, LOGO_UPLOAD_DIR);
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname) || '.png';
-    cb(null, `${req.user!.companyId}-${Date.now()}${ext}`);
-  },
-});
+// Stocké sur Vercel Blob (stockage objet, accès public) plutôt que sur
+// disque local : le système de fichiers de Vercel est en lecture seule
+// hors /tmp, et /tmp n'y est ni servi ni persistant entre invocations —
+// un `multer.diskStorage` ne fonctionne donc jamais en production sur ce
+// déploiement. En mémoire ici (memoryStorage), le buffer part directement
+// vers Blob sans jamais toucher le disque. Même limite non résolue côté
+// upload de documents employé (employees.routes.ts).
 const logoUpload = multer({
-  storage: logoStorage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 2 * 1024 * 1024 }, // 2 Mo
   fileFilter: (_req, file, cb) => {
     if (!/^image\/(png|jpe?g|svg\+xml|webp)$/.test(file.mimetype)) {
@@ -190,10 +176,14 @@ companiesRouter.post(
   logoUpload.single('logo'),
   asyncHandler(async (req, res) => {
     if (!req.file) throw new HttpError(400, 'Fichier logo manquant');
-    const logo = `/uploads/logos/${req.file.filename}`;
+    const ext = path.extname(req.file.originalname) || '.png';
+    const blob = await put(`logos/${req.user!.companyId}-${Date.now()}${ext}`, req.file.buffer, {
+      access: 'public',
+      contentType: req.file.mimetype,
+    });
     const company = await prisma.company.update({
       where: { id: req.user!.companyId },
-      data: { logo },
+      data: { logo: blob.url },
     });
     res.json(toCompanyDTO(company));
   })
