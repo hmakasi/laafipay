@@ -30,6 +30,7 @@ import { ComptaDashboardPage } from '@/pages/compta/ComptaDashboardPage';
 import { ComptaComingSoonPage } from '@/pages/compta/ComptaComingSoonPage';
 import { TresorerieRapprochementPage } from '@/pages/compta/TresorerieRapprochementPage';
 import { WhatsAppAccountingPage } from '@/pages/compta/WhatsAppAccountingPage';
+import { ComptaFiscalPage } from '@/pages/compta/ComptaFiscalPage';
 import { PasserellePaiePage } from '@/pages/compta/PasserellePaiePage';
 
 function NotFoundRedirect() {
@@ -203,7 +204,7 @@ export function AppRouter() {
             <Route path="passerelle-paie" element={<PasserellePaiePage />} />
             <Route path="whatsapp" element={<WhatsAppAccountingPage />} />
             <Route path="tresorerie" element={<TresorerieRapprochementPage />} />
-            <Route path="fiscal" element={<ComptaComingSoonPage title="Copilote Fiscal" />} />
+            <Route path="fiscal" element={<ComptaFiscalPage />} />
             <Route path="journal" element={<ComptaComingSoonPage title="Journal & Écritures" />} />
             <Route path="rapports" element={<ComptaComingSoonPage title="États financiers" />} />
             <Route path="parametres" element={<ComptaComingSoonPage title="Paramètres LaafiCompta" />} />
