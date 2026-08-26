@@ -1,10 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import { Company, PayrollCycle, PayrollEntry, Prisma } from '@prisma/client';
 import { prisma } from './prisma.js';
+import { receivePayrollComptaEvent } from './comptaReceiver.js';
 import type { ComptaJournalLinePayload, PayrollComptaEventPayload } from '../types/compta.js';
 
 const MAX_DELIVERY_ATTEMPTS = 8;
-const REQUEST_TIMEOUT_MS = 8_000;
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
@@ -87,42 +87,25 @@ function buildPayload(
   };
 }
 
-async function postToComptaApi(payload: PayrollComptaEventPayload): Promise<{ ok: boolean; status: number; body: string }> {
-  const url = process.env.LAAFICOMPTA_API_URL;
-  const apiKey = process.env.LAAFICOMPTA_API_KEY;
-  if (!url || !apiKey) {
-    throw new Error('LAAFICOMPTA_API_URL / LAAFICOMPTA_API_KEY non configurés');
-  }
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-  try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Api-Key': apiKey },
-      body: JSON.stringify(payload),
-      signal: controller.signal,
-    });
-    const body = await res.text();
-    return { ok: res.ok, status: res.status, body };
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
 // Tente une livraison pour un événement de l'outbox déjà persisté. Ne
 // lève jamais — l'échec est enregistré sur la ligne elle-même
-// (status/attempts/lastError), à charge du job de retry de reprendre.
+// (status/attempts/lastError), à charge du job de retry (voir
+// retryPendingComptaEvents ci-dessous) de reprendre.
+//
+// Appelle receivePayrollComptaEvent(...) directement en process plutôt que
+// par un appel HTTP LaafiPay -> lui-même : les deux vivent dans le même
+// repo/process tant que LaafiCompta n'a pas son propre service (voir
+// comptaReceiver.ts), et un appel HTTP "fire and forget" après la réponse
+// au client n'est pas fiable sur Vercel serverless (l'exécution peut être
+// coupée dès que la réponse est envoyée, sans `waitUntil`). Un appel de
+// fonction directe, lui, peut simplement être attendu normalement.
 async function attemptDelivery(outboxEventId: string): Promise<void> {
   const event = await prisma.comptaOutboxEvent.findUnique({ where: { id: outboxEventId } });
   if (!event || event.status === 'envoye') return;
 
   try {
     const payload = event.payload as unknown as PayrollComptaEventPayload;
-    const result = await postToComptaApi(payload);
-    if (!result.ok) {
-      throw new Error(`LaafiCompta a répondu ${result.status} : ${result.body.slice(0, 300)}`);
-    }
+    await receivePayrollComptaEvent(payload);
     await prisma.comptaOutboxEvent.update({
       where: { id: event.id },
       data: { status: 'envoye', sentAt: new Date(), attempts: { increment: 1 }, lastError: null },
@@ -139,11 +122,12 @@ async function attemptDelivery(outboxEventId: string): Promise<void> {
   }
 }
 
-// Point d'entrée appelé depuis POST /payroll/cycles/:id/validate. Ne
-// bloque JAMAIS la clôture du cycle : la partie awaited ici n'est que
-// l'écriture durable en base (rapide, transactionnelle) — la tentative
-// d'envoi HTTP proprement dite tourne en arrière-plan (voir `void
-// attemptDelivery(...)` plus bas) et ne retarde pas la réponse au client.
+// Point d'entrée appelé depuis POST /payroll/cycles/:id/validate. La
+// tentative de livraison est maintenant attendue (pas fire-and-forget) :
+// depuis que c'est un appel en process plutôt qu'un aller-retour HTTP,
+// c'est rapide (quelques requêtes DB) et n'a plus besoin d'être détachée
+// de la réponse au client — attemptDelivery() ne lève de toute façon
+// jamais, donc ça ne peut pas faire échouer la validation du cycle.
 export async function dispatchComptaEvent(cycleId: string, companyId: string): Promise<void> {
   const [cycle, company] = await Promise.all([
     prisma.payrollCycle.findFirstOrThrow({ where: { id: cycleId, companyId }, include: { entries: true } }),
@@ -169,14 +153,13 @@ export async function dispatchComptaEvent(cycleId: string, companyId: string): P
         data: { id: eventId, companyId, cycleId, payload: payload as unknown as Prisma.InputJsonValue, status: 'en_attente' },
       });
 
-  void attemptDelivery(outboxEvent.id).catch((err) => {
-    console.error(`[comptaBridge] échec inattendu de dispatchComptaEvent(${cycleId})`, err);
-  });
+  await attemptDelivery(outboxEvent.id);
 }
 
-// Appelé périodiquement (voir server/src/index.ts) pour retenter les
-// événements en attente/échec — filet de sécurité si LaafiCompta était
-// injoignable au moment de la validation du cycle.
+// Appelé par le cron Vercel (GET /compta/retry-bridge, voir vercel.json)
+// en production, et par server/src/index.ts en local — filet de sécurité
+// pour retenter les événements restés en_attente/échec (ex. la
+// comptabilisation a échoué au moment de la validation du cycle).
 export async function retryPendingComptaEvents(): Promise<void> {
   const pending = await prisma.comptaOutboxEvent.findMany({
     where: { status: { in: ['en_attente', 'echec'] }, attempts: { lt: MAX_DELIVERY_ATTEMPTS } },

@@ -9,5 +9,8 @@
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
+  ],
+  "crons": [
+    { "path": "/api/compta/retry-bridge", "schedule": "0 3 * * *" }
   ]
 }

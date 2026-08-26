@@ -4,8 +4,10 @@ import { prisma } from '../lib/prisma.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { authorizeComptaApiKey } from '../middleware/comptaAuth.js';
 import { authenticate, authorize } from '../middleware/auth.js';
-import { NotFoundError } from '../lib/errors.js';
+import { NotFoundError, UnauthorizedError } from '../lib/errors.js';
 import { FISCAL_DEADLINE_RULES, nextOccurrence, severityForDueDate } from '../lib/fiscalCalendar.js';
+import { receivePayrollComptaEvent } from '../lib/comptaReceiver.js';
+import { retryPendingComptaEvents } from '../lib/comptaBridge.js';
 
 export const comptaRouter = Router();
 
@@ -58,39 +60,28 @@ comptaRouter.post(
   authorizeComptaApiKey,
   asyncHandler(async (req, res) => {
     const body = payrollComptaEventSchema.parse(req.body);
+    const result = await receivePayrollComptaEvent(body);
+    res.status(result.status === 'deja_recu' ? 200 : 201).json(result);
+  })
+);
 
-    const existing = await prisma.comptaJournalEntry.findUnique({
-      where: { sourceEventId: body.eventId },
-      include: { lignes: true },
-    });
-    if (existing) {
-      res.status(200).json({ status: 'deja_recu', journalEntryId: existing.id });
-      return;
+// ── Cron de retry (Vercel Cron) ─────────────────────────────────
+// server/src/index.ts a bien un setInterval de retry, mais Vercel exécute
+// l'app via api/index.ts (l'app Express seule) sans jamais lancer
+// index.ts — sur ce déploiement, aucun setInterval ne tourne jamais. Cette
+// route est donc le seul filet de sécurité en production pour les
+// événements restés "en_attente"/"echec" ; déclenchée par vercel.json
+// (crons), authentifiée par le header que Vercel envoie automatiquement
+// quand CRON_SECRET est configuré.
+comptaRouter.get(
+  '/retry-bridge',
+  asyncHandler(async (req, res) => {
+    const cronSecret = process.env.CRON_SECRET;
+    if (!cronSecret || req.headers.authorization !== `Bearer ${cronSecret}`) {
+      throw new UnauthorizedError('Secret de cron invalide ou non configuré');
     }
-
-    const [entryPayload] = body.journalEntries;
-    const created = await prisma.comptaJournalEntry.create({
-      data: {
-        companyId: body.company.id,
-        journal: entryPayload.journal,
-        piece: entryPayload.piece,
-        dateEcriture: new Date(entryPayload.dateEcriture),
-        libelle: entryPayload.libelle,
-        sourceSystem: body.source,
-        sourceEventId: body.eventId,
-        lignes: {
-          create: entryPayload.lignes.map((l) => ({
-            compte: l.compte,
-            libelleCompte: l.libelleCompte,
-            debit: l.debit,
-            credit: l.credit,
-          })),
-        },
-      },
-      include: { lignes: true },
-    });
-
-    res.status(201).json({ status: 'enregistre', journalEntryId: created.id });
+    await retryPendingComptaEvents();
+    res.status(200).json({ status: 'ok' });
   })
 );
 
