@@ -174,7 +174,10 @@ adminRouter.get(
       where: archived ? { archivedAt: { not: null } } : { archivedAt: null },
       orderBy: { createdAt: 'desc' },
       include: {
-        users: { where: { role: 'admin' }, select: { id: true, email: true, firstName: true, lastName: true } },
+        users: {
+          where: { role: 'admin' },
+          select: { id: true, email: true, preArchiveEmail: true, firstName: true, lastName: true },
+        },
         _count: { select: { employees: true } },
       },
     });
@@ -188,7 +191,10 @@ adminRouter.get(
         createdAt: c.createdAt.toISOString(),
         archivedAt: c.archivedAt?.toISOString(),
         employeeCount: c._count.employees,
-        admins: c.users,
+        // preArchiveEmail affiché quand présent : l'email réel est mangé
+        // pendant l'archivage (voir POST .../archive) pour libérer
+        // l'adresse, mais reste la seule chose lisible par un humain.
+        admins: c.users.map((u) => ({ id: u.id, email: u.preArchiveEmail ?? u.email, firstName: u.firstName, lastName: u.lastName })),
       }))
     );
   })
@@ -220,12 +226,27 @@ adminRouter.patch(
 // l'action déclenchée par le bouton "Archiver" de l'onglet "Entreprises
 // créées" — DELETE ci-dessous reste un vrai effacement (cascade),
 // conservé mais non exposé dans l'UI pour l'instant.
+//
+// L'email de chaque utilisateur est remplacé par une valeur factice
+// (préservée dans preArchiveEmail) pour libérer l'adresse réelle : sinon
+// la contrainte unique sur User.email empêcherait pour toujours une
+// nouvelle demande d'inscription avec cette même adresse, même après
+// archivage. Boucle séquentielle plutôt que updateMany (une valeur
+// différente par ligne) — pas de $transaction interactive, cohérent avec
+// le reste du code sous pooler Supabase.
 adminRouter.post(
   '/companies/:id/archive',
   asyncHandler(async (req, res) => {
-    const company = await prisma.company.findUnique({ where: { id: req.params.id } });
+    const company = await prisma.company.findUnique({ where: { id: req.params.id }, include: { users: true } });
     if (!company) throw new NotFoundError(`Entreprise ${req.params.id} introuvable`);
     if (company.archivedAt) throw new HttpError(409, 'Cette entreprise est déjà archivée');
+
+    for (const u of company.users) {
+      await prisma.user.update({
+        where: { id: u.id },
+        data: { preArchiveEmail: u.email, email: `archived-${u.id}@laafipay.invalid` },
+      });
+    }
     await prisma.company.update({ where: { id: company.id }, data: { archivedAt: new Date() } });
     res.status(204).send();
   })
@@ -234,9 +255,24 @@ adminRouter.post(
 adminRouter.post(
   '/companies/:id/restore',
   asyncHandler(async (req, res) => {
-    const company = await prisma.company.findUnique({ where: { id: req.params.id } });
+    const company = await prisma.company.findUnique({ where: { id: req.params.id }, include: { users: true } });
     if (!company) throw new NotFoundError(`Entreprise ${req.params.id} introuvable`);
     if (!company.archivedAt) throw new HttpError(409, "Cette entreprise n'est pas archivée");
+
+    // Vérifie qu'aucune adresse d'origine n'a été reprise entre-temps par un
+    // autre compte avant de toucher quoi que ce soit — sinon la restauration
+    // s'arrêterait à mi-chemin sur une violation de contrainte unique.
+    for (const u of company.users) {
+      if (!u.preArchiveEmail) continue;
+      const conflict = await prisma.user.findUnique({ where: { email: u.preArchiveEmail } });
+      if (conflict) {
+        throw new HttpError(409, `L'adresse ${u.preArchiveEmail} est déjà utilisée par un autre compte, restauration impossible`);
+      }
+    }
+    for (const u of company.users) {
+      if (!u.preArchiveEmail) continue;
+      await prisma.user.update({ where: { id: u.id }, data: { email: u.preArchiveEmail, preArchiveEmail: null } });
+    }
     await prisma.company.update({ where: { id: company.id }, data: { archivedAt: null } });
     res.status(204).send();
   })

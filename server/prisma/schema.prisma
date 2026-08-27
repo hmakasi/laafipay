@@ -287,6 +287,12 @@ model User {
   firstName    String
   lastName     String
   email        String    @unique
+  // Email d'origine, sauvegardé pendant que l'entreprise est archivée (voir
+  // admin.routes.ts archive/restore) : `email` est alors remplacé par une
+  // valeur factice pour libérer l'adresse réelle et permettre une nouvelle
+  // demande d'inscription avec la même adresse — restauré tel quel si
+  // l'entreprise est réactivée.
+  preArchiveEmail String?
   passwordHash String
   role         UserRole
   employeeId   String?   @unique
