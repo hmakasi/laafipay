@@ -294,6 +294,10 @@ model User {
   // l'entreprise est réactivée.
   preArchiveEmail String?
   passwordHash String
+  // true tant que l'utilisateur n'a pas remplacé le mot de passe temporaire
+  // généré à la création du compte (voir admin.routes.ts) — force l'écran
+  // de changement de mot de passe dès la première connexion.
+  mustChangePassword Boolean @default(false)
   role         UserRole
   employeeId   String?   @unique
   employee     Employee? @relation(fields: [employeeId], references: [id])

@@ -12,6 +12,7 @@ export function toUserDTO(user: User) {
     avatar: user.avatar ?? undefined,
     lastLogin: user.lastLogin?.toISOString(),
     isActive: user.isActive,
+    mustChangePassword: user.mustChangePassword,
     isPlatformAdmin: isPlatformAdminEmail(user.email),
   };
 }

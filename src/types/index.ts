@@ -65,6 +65,9 @@ export interface User {
   avatar?: string;
   lastLogin?: string;
   isActive: boolean;
+  // true tant que l'utilisateur n'a pas remplacé le mot de passe temporaire
+  // reçu par e-mail à la création du compte.
+  mustChangePassword?: boolean;
   // Équipe LaafiPay (voir server/src/lib/platformAdmin.ts) — n'a rien à voir
   // avec `role`, qui reste scopé à une entreprise.
   isPlatformAdmin?: boolean;

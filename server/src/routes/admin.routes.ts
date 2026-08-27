@@ -59,6 +59,7 @@ adminRouter.post(
         lastName: body.lastName,
         email: body.email,
         passwordHash,
+        mustChangePassword: true,
         role: 'admin',
       },
     });
@@ -133,6 +134,7 @@ adminRouter.post(
         lastName: request.lastName,
         email: request.email,
         passwordHash,
+        mustChangePassword: true,
         role: 'admin',
       },
     });

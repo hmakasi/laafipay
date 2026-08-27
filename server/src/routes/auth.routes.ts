@@ -82,8 +82,11 @@ authRouter.patch(
     if (!valid) throw new UnauthorizedError('Mot de passe actuel incorrect');
 
     const passwordHash = await bcrypt.hash(newPassword, 10);
-    await prisma.user.update({ where: { id: user.id }, data: { passwordHash } });
+    const updated = await prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash, mustChangePassword: false },
+    });
 
-    res.status(204).send();
+    res.json(toUserDTO(updated));
   })
 );

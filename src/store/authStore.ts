@@ -20,7 +20,7 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: null,
       token: null,
       isAuthenticated: false,
@@ -65,7 +65,8 @@ export const useAuthStore = create<AuthState>()(
       },
 
       changePassword: async (currentPassword, newPassword) => {
-        await changePasswordApi(currentPassword, newPassword);
+        const user = await changePasswordApi(currentPassword, newPassword);
+        set({ user: { ...get().user, ...user } });
       },
 
       logout: async () => {
