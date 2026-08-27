@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
-import { Check, Pencil, ShieldCheck, Trash2, X } from 'lucide-react';
+import { Archive, Check, Pencil, RotateCcw, ShieldCheck, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -25,8 +25,9 @@ import {
 import {
   useAdminCompaniesQuery,
   useApproveSignupRequestMutation,
-  useDeleteAdminCompanyMutation,
+  useArchiveAdminCompanyMutation,
   useRejectSignupRequestMutation,
+  useRestoreAdminCompanyMutation,
   useSignupRequestsQuery,
   useUpdateAdminCompanyMutation,
 } from '@/hooks/useAdmin';
@@ -201,15 +202,15 @@ function EditCompanyDialog({ company, open, onOpenChange }: { company: AdminComp
 
 function CompaniesTab() {
   const { data: companies, isLoading } = useAdminCompaniesQuery();
-  const deleteMutation = useDeleteAdminCompanyMutation();
+  const archiveMutation = useArchiveAdminCompanyMutation();
   const [editingCompany, setEditingCompany] = useState<AdminCompany | null>(null);
 
-  const handleDelete = async (company: AdminCompany) => {
+  const handleArchive = async (company: AdminCompany) => {
     try {
-      await deleteMutation.mutateAsync(company.id);
-      toast.success(`${company.name} supprimée`);
+      await archiveMutation.mutateAsync(company.id);
+      toast.success(`${company.name} archivée`);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erreur lors de la suppression');
+      toast.error(err instanceof Error ? err.message : "Erreur lors de l'archivage");
     }
   };
 
@@ -244,21 +245,22 @@ function CompaniesTab() {
               </Button>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button size="sm" variant="outline" disabled={deleteMutation.isPending}>
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Supprimer
+                  <Button size="sm" variant="outline" disabled={archiveMutation.isPending}>
+                    <Archive className="mr-2 h-4 w-4" />
+                    Archiver
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Supprimer {c.name} ?</AlertDialogTitle>
+                    <AlertDialogTitle>Archiver {c.name} ?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Action irréversible : l'entreprise, ses employés, ses paies et bulletins seront définitivement supprimés.
+                      Les utilisateurs de cette entreprise ne pourront plus se connecter tant qu'elle n'est pas restaurée. Rien
+                      n'est supprimé — retrouvable dans l'onglet "Archivées".
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Annuler</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => handleDelete(c)}>Supprimer</AlertDialogAction>
+                    <AlertDialogAction onClick={() => handleArchive(c)}>Archiver</AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
@@ -273,6 +275,54 @@ function CompaniesTab() {
           onOpenChange={(open) => !open && setEditingCompany(null)}
         />
       )}
+    </div>
+  );
+}
+
+function ArchivedCompaniesTab() {
+  const { data: companies, isLoading } = useAdminCompaniesQuery(true);
+  const restoreMutation = useRestoreAdminCompanyMutation();
+
+  const handleRestore = async (company: AdminCompany) => {
+    try {
+      await restoreMutation.mutateAsync(company.id);
+      toast.success(`${company.name} restaurée`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur lors de la restauration');
+    }
+  };
+
+  if (isLoading) return <Skeleton className="h-64 w-full" />;
+  if (!companies || companies.length === 0) {
+    return (
+      <Card>
+        <CardContent className="py-16 text-center text-sm text-muted-foreground">Aucune entreprise archivée.</CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {companies.map((c) => (
+        <Card key={c.id}>
+          <CardContent className="flex items-center justify-between gap-4 p-4">
+            <div className="min-w-0">
+              <div className="font-medium">{c.name}</div>
+              <div className="text-sm text-muted-foreground">
+                {c.admins.length > 0 ? c.admins.map((a) => a.email).join(', ') : 'Aucun admin'}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {COUNTRY_META[c.countryCode].flag} {COUNTRY_META[c.countryCode].name} ({c.currencyCode}) · {c.employeeCount} employé
+                {c.employeeCount > 1 ? 's' : ''} · archivée le {c.archivedAt ? formatDate(c.archivedAt) : '—'}
+              </div>
+            </div>
+            <Button size="sm" variant="outline" disabled={restoreMutation.isPending} onClick={() => handleRestore(c)}>
+              <RotateCcw className="mr-2 h-4 w-4" />
+              Restaurer
+            </Button>
+          </CardContent>
+        </Card>
+      ))}
     </div>
   );
 }
@@ -292,12 +342,16 @@ export function SignupRequestsPage() {
         <TabsList>
           <TabsTrigger value="requests">Demandes</TabsTrigger>
           <TabsTrigger value="companies">Entreprises créées</TabsTrigger>
+          <TabsTrigger value="archived">Archivées</TabsTrigger>
         </TabsList>
         <TabsContent value="requests">
           <SignupRequestsTab />
         </TabsContent>
         <TabsContent value="companies">
           <CompaniesTab />
+        </TabsContent>
+        <TabsContent value="archived">
+          <ArchivedCompaniesTab />
         </TabsContent>
       </Tabs>
     </div>

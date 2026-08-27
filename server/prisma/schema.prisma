@@ -241,6 +241,11 @@ model Company {
   logo                String?
   createdAt           DateTime     @default(now())
   updatedAt           DateTime     @updatedAt
+  // Archivage depuis l'admin LaafiPay (voir admin.routes.ts) : suspend la
+  // connexion des utilisateurs de cette entreprise sans supprimer les
+  // données, contrairement à DELETE /admin/companies/:id qui reste un vrai
+  // effacement (cascade) — non exposé dans l'UI pour l'instant.
+  archivedAt          DateTime?
 
   users                User[]
   employees            Employee[]

@@ -169,7 +169,9 @@ adminRouter.post(
 adminRouter.get(
   '/companies',
   asyncHandler(async (req, res) => {
+    const archived = req.query.archived === 'true';
     const companies = await prisma.company.findMany({
+      where: archived ? { archivedAt: { not: null } } : { archivedAt: null },
       orderBy: { createdAt: 'desc' },
       include: {
         users: { where: { role: 'admin' }, select: { id: true, email: true, firstName: true, lastName: true } },
@@ -184,6 +186,7 @@ adminRouter.get(
         countryCode: c.countryCode,
         currencyCode: c.currencyCode,
         createdAt: c.createdAt.toISOString(),
+        archivedAt: c.archivedAt?.toISOString(),
         employeeCount: c._count.employees,
         admins: c.users,
       }))
@@ -211,10 +214,39 @@ adminRouter.patch(
   })
 );
 
+// Archive plutôt que supprime : les données restent intactes, seule la
+// connexion des utilisateurs de cette entreprise est bloquée (voir
+// routes/auth.routes.ts) tant qu'elle n'est pas restaurée. C'est
+// l'action déclenchée par le bouton "Archiver" de l'onglet "Entreprises
+// créées" — DELETE ci-dessous reste un vrai effacement (cascade),
+// conservé mais non exposé dans l'UI pour l'instant.
+adminRouter.post(
+  '/companies/:id/archive',
+  asyncHandler(async (req, res) => {
+    const company = await prisma.company.findUnique({ where: { id: req.params.id } });
+    if (!company) throw new NotFoundError(`Entreprise ${req.params.id} introuvable`);
+    if (company.archivedAt) throw new HttpError(409, 'Cette entreprise est déjà archivée');
+    await prisma.company.update({ where: { id: company.id }, data: { archivedAt: new Date() } });
+    res.status(204).send();
+  })
+);
+
+adminRouter.post(
+  '/companies/:id/restore',
+  asyncHandler(async (req, res) => {
+    const company = await prisma.company.findUnique({ where: { id: req.params.id } });
+    if (!company) throw new NotFoundError(`Entreprise ${req.params.id} introuvable`);
+    if (!company.archivedAt) throw new HttpError(409, "Cette entreprise n'est pas archivée");
+    await prisma.company.update({ where: { id: company.id }, data: { archivedAt: null } });
+    res.status(204).send();
+  })
+);
+
 // Supprime l'entreprise et tout ce qui en dépend (employés, paies,
 // bulletins...) via les `onDelete: Cascade` du schéma — irréversible,
 // pas de confirmation supplémentaire côté serveur au-delà de
 // requirePlatformAdmin : le frontend doit confirmer avant d'appeler ceci.
+// Non exposé dans l'UI pour l'instant, gardé pour un usage ponctuel.
 adminRouter.delete(
   '/companies/:id',
   asyncHandler(async (req, res) => {

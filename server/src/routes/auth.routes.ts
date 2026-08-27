@@ -19,7 +19,7 @@ authRouter.post(
   asyncHandler(async (req, res) => {
     const { email, password } = loginSchema.parse(req.body);
 
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await prisma.user.findUnique({ where: { email }, include: { company: { select: { archivedAt: true } } } });
     if (!user || !user.isActive) {
       throw new UnauthorizedError('E-mail ou mot de passe incorrect');
     }
@@ -27,6 +27,13 @@ authRouter.post(
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) {
       throw new UnauthorizedError('E-mail ou mot de passe incorrect');
+    }
+
+    // Vérifié après le mot de passe, pas avant : ne pas laisser un
+    // attaquant qui ne connaît pas le mot de passe apprendre qu'une
+    // entreprise est archivée.
+    if (user.company.archivedAt) {
+      throw new UnauthorizedError('Ce compte est archivé. Contactez LaafiPay pour le réactiver.');
     }
 
     await prisma.user.update({ where: { id: user.id }, data: { lastLogin: new Date() } });

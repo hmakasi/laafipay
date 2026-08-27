@@ -95,6 +95,7 @@ export interface AdminCompany {
   countryCode: CountryCode;
   currencyCode: CurrencyCode;
   createdAt: string;
+  archivedAt?: string;
   employeeCount: number;
   admins: Array<{ id: string; email: string; firstName: string; lastName: string }>;
 }

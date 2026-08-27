@@ -23,14 +23,18 @@ export async function rejectSignupRequest(id: string, reason?: string): Promise<
   return apiClient.post<void>(`/admin/signup-requests/${id}/reject`, { reason });
 }
 
-export async function getAdminCompanies(): Promise<AdminCompany[]> {
-  return apiClient.get<AdminCompany[]>('/admin/companies');
+export async function getAdminCompanies(archived = false): Promise<AdminCompany[]> {
+  return apiClient.get<AdminCompany[]>(`/admin/companies?archived=${archived}`);
 }
 
 export async function updateAdminCompany(id: string, data: { name?: string; legalName?: string }): Promise<AdminCompany> {
   return apiClient.patch<AdminCompany>(`/admin/companies/${id}`, data);
 }
 
-export async function deleteAdminCompany(id: string): Promise<void> {
-  return apiClient.delete<void>(`/admin/companies/${id}`);
+export async function archiveAdminCompany(id: string): Promise<void> {
+  return apiClient.post<void>(`/admin/companies/${id}/archive`);
+}
+
+export async function restoreAdminCompany(id: string): Promise<void> {
+  return apiClient.post<void>(`/admin/companies/${id}/restore`);
 }

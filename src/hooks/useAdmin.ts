@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   approveSignupRequest,
-  deleteAdminCompany,
+  archiveAdminCompany,
   getAdminCompanies,
   getSignupRequests,
   rejectSignupRequest,
+  restoreAdminCompany,
   updateAdminCompany,
 } from '@/services/api/admin';
 import { SignupRequest } from '@/types';
@@ -36,10 +37,10 @@ export function useRejectSignupRequestMutation() {
   });
 }
 
-export function useAdminCompaniesQuery() {
+export function useAdminCompaniesQuery(archived = false) {
   return useQuery({
-    queryKey: ['admin-companies'],
-    queryFn: getAdminCompanies,
+    queryKey: ['admin-companies', archived],
+    queryFn: () => getAdminCompanies(archived),
   });
 }
 
@@ -53,10 +54,20 @@ export function useUpdateAdminCompanyMutation() {
   });
 }
 
-export function useDeleteAdminCompanyMutation() {
+export function useArchiveAdminCompanyMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => deleteAdminCompany(id),
+    mutationFn: (id: string) => archiveAdminCompany(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-companies'] });
+    },
+  });
+}
+
+export function useRestoreAdminCompanyMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => restoreAdminCompany(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-companies'] });
     },
