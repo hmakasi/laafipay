@@ -11,6 +11,10 @@ import { retryPendingComptaEvents } from '../lib/comptaBridge.js';
 
 export const comptaRouter = Router();
 
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
+}
+
 const journalLineSchema = z.object({
   compte: z.string(),
   libelleCompte: z.string(),
@@ -235,5 +239,103 @@ comptaRouter.get(
       .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
 
     res.json(deadlines);
+  })
+);
+
+// ── Journal & Écritures ──────────────────────────────────────────
+// Liste toutes les écritures réellement enregistrées (aujourd'hui,
+// uniquement celles reçues via la passerelle paie — le hub WhatsApp
+// Accounting reste mocké et n'écrit pas encore ici). Pas de pagination :
+// volume attendu faible tant qu'un seul journal (OD) alimente la table.
+comptaRouter.get(
+  '/journal-entries',
+  authenticate,
+  authorize('payroll:read'),
+  asyncHandler(async (req, res) => {
+    const companyId = req.user!.companyId;
+    const journal = typeof req.query.journal === 'string' ? req.query.journal : undefined;
+
+    const entries = await prisma.comptaJournalEntry.findMany({
+      where: { companyId, ...(journal ? { journal: journal as 'OD' | 'AC' } : {}) },
+      include: { lignes: true },
+      orderBy: { dateEcriture: 'desc' },
+    });
+
+    res.json(
+      entries.map((e) => ({
+        id: e.id,
+        journal: e.journal,
+        piece: e.piece,
+        dateEcriture: e.dateEcriture.toISOString().slice(0, 10),
+        libelle: e.libelle,
+        sourceSystem: e.sourceSystem,
+        receivedAt: e.receivedAt.toISOString(),
+        lignes: e.lignes.map((l) => ({ compte: l.compte, libelleCompte: l.libelleCompte, debit: l.debit, credit: l.credit })),
+      }))
+    );
+  })
+);
+
+// ── États financiers — Balance générale ──────────────────────────
+// Agrégation réelle débit/crédit par compte à partir des écritures
+// existantes. Bilan / Compte de résultat / TAFIRE nécessiteraient de
+// classer chaque compte par nature (actif/passif/charge/produit) et un
+// grand livre complet (achats/ventes, pas seulement la paie) — non
+// construits ici, volontairement absents plutôt qu'approximés.
+comptaRouter.get(
+  '/trial-balance',
+  authenticate,
+  authorize('payroll:read'),
+  asyncHandler(async (req, res) => {
+    const companyId = req.user!.companyId;
+
+    const lignes = await prisma.comptaJournalLine.findMany({
+      where: { entry: { companyId } },
+      select: { compte: true, libelleCompte: true, debit: true, credit: true },
+    });
+
+    const byAccount = new Map<string, { compte: string; libelleCompte: string; debit: number; credit: number }>();
+    for (const l of lignes) {
+      const existing = byAccount.get(l.compte);
+      if (existing) {
+        existing.debit += l.debit;
+        existing.credit += l.credit;
+      } else {
+        byAccount.set(l.compte, { compte: l.compte, libelleCompte: l.libelleCompte, debit: l.debit, credit: l.credit });
+      }
+    }
+
+    const rows = [...byAccount.values()]
+      .map((r) => ({ ...r, solde: round2(r.debit - r.credit) }))
+      .sort((a, b) => a.compte.localeCompare(b.compte));
+
+    res.json({
+      rows,
+      totals: {
+        debit: round2(rows.reduce((sum, r) => sum + r.debit, 0)),
+        credit: round2(rows.reduce((sum, r) => sum + r.credit, 0)),
+      },
+    });
+  })
+);
+
+// ── Paramètres — Plan comptable utilisé ──────────────────────────
+// Comptes réellement mouvementés (dérivés des écritures existantes),
+// pas un plan comptable SYSCOHADA générique complet qu'on n'utilise pas.
+comptaRouter.get(
+  '/chart-of-accounts',
+  authenticate,
+  authorize('payroll:read'),
+  asyncHandler(async (req, res) => {
+    const companyId = req.user!.companyId;
+
+    const lignes = await prisma.comptaJournalLine.findMany({
+      where: { entry: { companyId } },
+      select: { compte: true, libelleCompte: true },
+      distinct: ['compte'],
+      orderBy: { compte: 'asc' },
+    });
+
+    res.json(lignes.map((l) => ({ compte: l.compte, libelle: l.libelleCompte })));
   })
 );

@@ -27,11 +27,13 @@ import { AuditPage } from '@/pages/audit/AuditPage';
 import { LandingPage } from '@/pages/LandingPage';
 import { ComptaLayout } from '@/components/compta/ComptaLayout';
 import { ComptaDashboardPage } from '@/pages/compta/ComptaDashboardPage';
-import { ComptaComingSoonPage } from '@/pages/compta/ComptaComingSoonPage';
 import { TresorerieRapprochementPage } from '@/pages/compta/TresorerieRapprochementPage';
 import { WhatsAppAccountingPage } from '@/pages/compta/WhatsAppAccountingPage';
 import { ComptaFiscalPage } from '@/pages/compta/ComptaFiscalPage';
 import { PasserellePaiePage } from '@/pages/compta/PasserellePaiePage';
+import { ComptaJournalPage } from '@/pages/compta/ComptaJournalPage';
+import { ComptaRapportsPage } from '@/pages/compta/ComptaRapportsPage';
+import { ComptaParametresPage } from '@/pages/compta/ComptaParametresPage';
 
 function NotFoundRedirect() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -205,9 +207,9 @@ export function AppRouter() {
             <Route path="whatsapp" element={<WhatsAppAccountingPage />} />
             <Route path="tresorerie" element={<TresorerieRapprochementPage />} />
             <Route path="fiscal" element={<ComptaFiscalPage />} />
-            <Route path="journal" element={<ComptaComingSoonPage title="Journal & Écritures" />} />
-            <Route path="rapports" element={<ComptaComingSoonPage title="États financiers" />} />
-            <Route path="parametres" element={<ComptaComingSoonPage title="Paramètres LaafiCompta" />} />
+            <Route path="journal" element={<ComptaJournalPage />} />
+            <Route path="rapports" element={<ComptaRapportsPage />} />
+            <Route path="parametres" element={<ComptaParametresPage />} />
           </Route>
         </Route>
 

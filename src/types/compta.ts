@@ -108,6 +108,47 @@ export interface LegalStatementTemplate {
 }
 
 // ------------------------------------------------------------
+// Journal & Écritures — écritures réelles (voir GET /compta/journal-entries)
+// ------------------------------------------------------------
+
+export interface ComptaJournalEntryDTO {
+  id: string;
+  journal: 'OD' | 'AC';
+  piece: string;
+  dateEcriture: string;
+  libelle: string;
+  sourceSystem: string;
+  receivedAt: string;
+  lignes: JournalLine[];
+}
+
+// ------------------------------------------------------------
+// États financiers — Balance générale (voir GET /compta/trial-balance)
+// ------------------------------------------------------------
+
+export interface TrialBalanceRow {
+  compte: string;
+  libelleCompte: string;
+  debit: number;
+  credit: number;
+  solde: number;
+}
+
+export interface TrialBalance {
+  rows: TrialBalanceRow[];
+  totals: { debit: number; credit: number };
+}
+
+// ------------------------------------------------------------
+// Paramètres — Plan comptable utilisé (voir GET /compta/chart-of-accounts)
+// ------------------------------------------------------------
+
+export interface ChartOfAccountsEntry {
+  compte: string;
+  libelle: string;
+}
+
+// ------------------------------------------------------------
 // Synthèse tableau de bord
 // ------------------------------------------------------------
 
