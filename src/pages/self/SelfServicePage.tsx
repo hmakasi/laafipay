@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MyPayslipsTab } from '@/pages/self/MyPayslipsTab';
 import { MyLeavesTab } from '@/pages/self/MyLeavesTab';
+import { MyReviewsTab } from '@/pages/self/MyReviewsTab';
 
 export function SelfServicePage() {
   const { t } = useTranslation();
@@ -14,12 +15,16 @@ export function SelfServicePage() {
         <TabsList>
           <TabsTrigger value="payslips">{t('nav.myPayslips')}</TabsTrigger>
           <TabsTrigger value="leaves">{t('nav.myLeaves')}</TabsTrigger>
+          <TabsTrigger value="reviews">{t('nav.myReviews')}</TabsTrigger>
         </TabsList>
         <TabsContent value="payslips">
           <MyPayslipsTab />
         </TabsContent>
         <TabsContent value="leaves">
           <MyLeavesTab />
+        </TabsContent>
+        <TabsContent value="reviews">
+          <MyReviewsTab />
         </TabsContent>
       </Tabs>
     </div>

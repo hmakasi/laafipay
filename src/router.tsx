@@ -21,6 +21,8 @@ import { PaymentOrderDetailPage } from '@/pages/payments/PaymentOrderDetailPage'
 import { PayslipsListPage } from '@/pages/payslips/PayslipsListPage';
 import { SelfServicePage } from '@/pages/self/SelfServicePage';
 import { LeavesListPage } from '@/pages/leaves/LeavesListPage';
+import { ReviewCyclesPage } from '@/pages/reviews/ReviewCyclesPage';
+import { ReviewCycleDetailPage } from '@/pages/reviews/ReviewCycleDetailPage';
 import { ReportsPage } from '@/pages/ReportsPage';
 import { UsersPage } from '@/pages/users/UsersPage';
 import { AuditPage } from '@/pages/audit/AuditPage';
@@ -165,6 +167,22 @@ export function AppRouter() {
               element={
                 <RequirePermission permission="leaves:read">
                   <LeavesListPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="reviews"
+              element={
+                <RequirePermission anyOf={['reviews:read', 'reviews:write', 'reviews:manage_team']}>
+                  <ReviewCyclesPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="reviews/:id"
+              element={
+                <RequirePermission anyOf={['reviews:read', 'reviews:write', 'reviews:manage_team']}>
+                  <ReviewCycleDetailPage />
                 </RequirePermission>
               }
             />

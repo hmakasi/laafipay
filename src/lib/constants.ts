@@ -186,3 +186,15 @@ export const LEAVE_STATUS_VARIANT: Record<string, 'success' | 'warning' | 'secon
   refuse: 'destructive',
   annule: 'secondary',
 };
+
+export const REVIEW_CYCLE_STATUS_VARIANT: Record<string, 'success' | 'warning' | 'secondary' | 'destructive'> = {
+  brouillon: 'secondary',
+  ouvert: 'warning',
+  cloture: 'success',
+};
+
+export const REVIEW_STATUS_VARIANT: Record<string, 'success' | 'warning' | 'secondary' | 'destructive'> = {
+  planifie: 'secondary',
+  en_cours: 'warning',
+  termine: 'success',
+};

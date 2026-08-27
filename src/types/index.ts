@@ -532,6 +532,46 @@ export interface LeaveDashboard {
 }
 
 // ============================================================
+// Reviews (entretiens annuels)
+// ============================================================
+
+export type ReviewCycleStatus = 'brouillon' | 'ouvert' | 'cloture';
+export type ReviewStatus = 'planifie' | 'en_cours' | 'termine';
+
+export interface ReviewCycle {
+  id: string;
+  name: string;
+  year: number;
+  startDate: string;
+  endDate: string;
+  status: ReviewCycleStatus;
+  createdBy: string;
+  createdAt: string;
+  // Uniquement renvoyé par POST /reviews/cycles/:id/close.
+  incompleteCount?: number;
+}
+
+export interface PerformanceReview {
+  id: string;
+  cycleId: string;
+  cycle: { name: string; year: number; status: ReviewCycleStatus };
+  employeeId: string;
+  managerId?: string;
+  status: ReviewStatus;
+  objectives?: string;
+  selfAssessment?: string;
+  selfRating?: number;
+  selfSubmittedAt?: string;
+  managerAssessment?: string;
+  managerRating?: number;
+  nextObjectives?: string;
+  managerSubmittedAt?: string;
+  completedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ============================================================
 // Notifications
 // ============================================================
 
