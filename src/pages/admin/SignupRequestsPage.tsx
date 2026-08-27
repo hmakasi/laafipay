@@ -283,7 +283,7 @@ export function SignupRequestsPage() {
       <div className="flex items-center gap-2">
         <ShieldCheck className="h-6 w-6 text-primary" />
         <div>
-          <h1 className="text-2xl font-semibold">Demandes d'inscription</h1>
+          <h1 className="text-2xl font-semibold">Entreprise Partenaire</h1>
           <p className="text-sm text-muted-foreground">Approuve/rejette les demandes, et gère les entreprises déjà créées.</p>
         </div>
       </div>
