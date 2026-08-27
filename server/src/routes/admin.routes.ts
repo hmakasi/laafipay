@@ -163,6 +163,68 @@ adminRouter.post(
   })
 );
 
+// ── Entreprises créées ────────────────────────────────────────────
+// Vue multi-tenant réservée à l'équipe LaafiPay — le reste de l'app ne
+// permet à personne de voir/gérer une entreprise autre que la sienne.
+adminRouter.get(
+  '/companies',
+  asyncHandler(async (req, res) => {
+    const companies = await prisma.company.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+        users: { where: { role: 'admin' }, select: { id: true, email: true, firstName: true, lastName: true } },
+        _count: { select: { employees: true } },
+      },
+    });
+    res.json(
+      companies.map((c) => ({
+        id: c.id,
+        name: c.name,
+        legalName: c.legalName ?? undefined,
+        countryCode: c.countryCode,
+        currencyCode: c.currencyCode,
+        createdAt: c.createdAt.toISOString(),
+        employeeCount: c._count.employees,
+        admins: c.users,
+      }))
+    );
+  })
+);
+
+// Champs volontairement limités à name/legalName — countryCode/currencyCode
+// exclus ici aussi (même raison que PATCH /companies/me : les rouvrir
+// remettrait en cause des paies déjà calculées dans l'ancien pays/l'ancienne
+// devise).
+const updateCompanyAdminSchema = z.object({
+  name: z.string().min(1).optional(),
+  legalName: z.string().optional(),
+});
+
+adminRouter.patch(
+  '/companies/:id',
+  asyncHandler(async (req, res) => {
+    const data = updateCompanyAdminSchema.parse(req.body);
+    const company = await prisma.company.findUnique({ where: { id: req.params.id } });
+    if (!company) throw new NotFoundError(`Entreprise ${req.params.id} introuvable`);
+    const updated = await prisma.company.update({ where: { id: company.id }, data });
+    res.json({ id: updated.id, name: updated.name, legalName: updated.legalName ?? undefined });
+  })
+);
+
+// Supprime l'entreprise et tout ce qui en dépend (employés, paies,
+// bulletins...) via les `onDelete: Cascade` du schéma — irréversible,
+// pas de confirmation supplémentaire côté serveur au-delà de
+// requirePlatformAdmin : le frontend doit confirmer avant d'appeler ceci.
+adminRouter.delete(
+  '/companies/:id',
+  asyncHandler(async (req, res) => {
+    const company = await prisma.company.findUnique({ where: { id: req.params.id } });
+    if (!company) throw new NotFoundError(`Entreprise ${req.params.id} introuvable`);
+    await prisma.company.delete({ where: { id: company.id } });
+    res.status(204).send();
+  })
+);
+
 const rejectSchema = z.object({ reason: z.string().optional() });
 
 adminRouter.post(

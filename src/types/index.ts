@@ -85,6 +85,20 @@ export interface SignupRequest {
   rejectionReason?: string;
 }
 
+// Vue multi-tenant réservée aux admins LaafiPay (voir GET /admin/companies)
+// — à ne pas confondre avec `Company`, qui reste l'entreprise de
+// l'utilisateur connecté.
+export interface AdminCompany {
+  id: string;
+  name: string;
+  legalName?: string;
+  countryCode: CountryCode;
+  currencyCode: CurrencyCode;
+  createdAt: string;
+  employeeCount: number;
+  admins: Array<{ id: string; email: string; firstName: string; lastName: string }>;
+}
+
 export interface AuthState {
   user: User | null;
   token: string | null;

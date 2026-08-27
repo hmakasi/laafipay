@@ -1,5 +1,5 @@
 import { apiClient } from '@/lib/apiClient';
-import { SignupRequest } from '@/types';
+import { AdminCompany, SignupRequest } from '@/types';
 
 export async function getSignupRequests(status?: SignupRequest['status']): Promise<SignupRequest[]> {
   const qs = status ? `?status=${status}` : '';
@@ -21,4 +21,16 @@ export async function approveSignupRequest(id: string): Promise<ApproveSignupReq
 
 export async function rejectSignupRequest(id: string, reason?: string): Promise<void> {
   return apiClient.post<void>(`/admin/signup-requests/${id}/reject`, { reason });
+}
+
+export async function getAdminCompanies(): Promise<AdminCompany[]> {
+  return apiClient.get<AdminCompany[]>('/admin/companies');
+}
+
+export async function updateAdminCompany(id: string, data: { name?: string; legalName?: string }): Promise<AdminCompany> {
+  return apiClient.patch<AdminCompany>(`/admin/companies/${id}`, data);
+}
+
+export async function deleteAdminCompany(id: string): Promise<void> {
+  return apiClient.delete<void>(`/admin/companies/${id}`);
 }
