@@ -11,6 +11,7 @@ import {
   Settings,
   ShieldCheck,
   UserCircle,
+  UserCheck,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -34,4 +35,13 @@ export const NAV_CONFIG: Record<string, NavItemConfig> = {
   settings: { id: 'settings', path: '/settings', labelKey: 'nav.settings', icon: Settings },
   audit: { id: 'audit', path: '/audit', labelKey: 'nav.audit', icon: ShieldCheck },
   self: { id: 'self', path: '/self', labelKey: 'nav.selfService', icon: UserCircle },
+  // Ajouté à la volée dans Sidebar.tsx pour les admins LaafiPay
+  // (user.isPlatformAdmin), pas listé dans ROLE_NAV_ITEMS comme les autres :
+  // ce n'est pas un rôle d'entreprise, voir server/src/lib/platformAdmin.ts.
+  adminSignupRequests: {
+    id: 'adminSignupRequests',
+    path: '/admin/signup-requests',
+    labelKey: 'nav.adminSignupRequests',
+    icon: UserCheck,
+  },
 };

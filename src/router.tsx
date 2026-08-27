@@ -1,7 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
-import { RequirePermission } from '@/components/auth/PermissionGate';
+import { RequirePermission, RequirePlatformAdmin } from '@/components/auth/PermissionGate';
 import { useAuthStore } from '@/store/authStore';
 import { LoginPage } from '@/pages/LoginPage';
 import { SignupPage } from '@/pages/SignupPage';
@@ -34,6 +34,7 @@ import { PasserellePaiePage } from '@/pages/compta/PasserellePaiePage';
 import { ComptaJournalPage } from '@/pages/compta/ComptaJournalPage';
 import { ComptaRapportsPage } from '@/pages/compta/ComptaRapportsPage';
 import { ComptaParametresPage } from '@/pages/compta/ComptaParametresPage';
+import { SignupRequestsPage } from '@/pages/admin/SignupRequestsPage';
 
 function NotFoundRedirect() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -189,6 +190,14 @@ export function AppRouter() {
                 <RequirePermission permission="audit:read">
                   <AuditPage />
                 </RequirePermission>
+              }
+            />
+            <Route
+              path="admin/signup-requests"
+              element={
+                <RequirePlatformAdmin>
+                  <SignupRequestsPage />
+                </RequirePlatformAdmin>
               }
             />
             <Route

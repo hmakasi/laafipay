@@ -14,6 +14,7 @@ import { leavesRouter } from './routes/leaves.routes.js';
 import { comptaRouter } from './routes/compta.routes.js';
 import { paymentsRouter } from './routes/payments.routes.js';
 import { treasuryRouter } from './routes/treasury.routes.js';
+import { adminRouter } from './routes/admin.routes.js';
 import { HttpError } from './lib/errors.js';
 
 const app = express();
@@ -35,6 +36,7 @@ app.use('/api/payslips', payslipsRouter);
 app.use('/api/leaves', leavesRouter);
 app.use('/api/payments', paymentsRouter);
 app.use('/api/treasury', treasuryRouter);
+app.use('/api/admin', adminRouter);
 
 // Passerelle LaafiPay -> LaafiCompta
 app.use('/api/compta', comptaRouter);

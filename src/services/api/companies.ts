@@ -1,4 +1,4 @@
-import { Company, CountryCode, CurrencyCode, User } from '@/types';
+import { Company, CountryCode, CurrencyCode } from '@/types';
 import { apiClient } from '@/lib/apiClient';
 
 export interface CompanySignupPayload {
@@ -9,17 +9,14 @@ export interface CompanySignupPayload {
     firstName: string;
     lastName: string;
     email: string;
-    password: string;
   };
 }
 
-interface SignupResponse {
-  token: string;
-  user: User;
-}
-
-export async function signupCompany(payload: CompanySignupPayload): Promise<SignupResponse> {
-  return apiClient.post<SignupResponse>('/companies/signup', payload);
+// Plus de compte créé ni de token renvoyé : la demande est mise en attente,
+// un admin LaafiPay l'approuve depuis /admin/signup-requests, ce qui génère
+// le mot de passe et envoie les identifiants par e-mail.
+export async function signupCompany(payload: CompanySignupPayload): Promise<{ status: 'en_attente' }> {
+  return apiClient.post<{ status: 'en_attente' }>('/companies/signup', payload);
 }
 
 // Création d'une entreprise supplémentaire par un utilisateur déjà authentifié

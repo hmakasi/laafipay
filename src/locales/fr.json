@@ -78,12 +78,15 @@
     "createCompany": "Créer une entreprise",
     "companyName": "Nom de l'entreprise",
     "adminAccount": "Compte administrateur",
-    "signup": "Créer le compte",
-    "signingUp": "Création en cours...",
+    "signup": "Envoyer la demande",
+    "signingUp": "Envoi en cours...",
     "haveAccount": "Vous avez déjà un compte ?",
     "noAccount": "Pas encore d'entreprise ?",
     "signupSuccess": "Entreprise créée avec succès",
-    "emailAlreadyUsed": "Cette adresse e-mail est déjà utilisée"
+    "emailAlreadyUsed": "Cette adresse e-mail est déjà utilisée",
+    "signupNoPasswordHint": "Pas de mot de passe à choisir : vos identifiants de connexion vous seront envoyés par e-mail après validation de votre demande.",
+    "signupRequestSent": "Demande envoyée",
+    "signupRequestSentDetail": "Votre demande de création d'entreprise a bien été reçue. Vous recevrez un e-mail avec vos identifiants de connexion dès qu'elle sera validée."
   },
   "nav": {
     "dashboard": "Tableau de bord",
@@ -97,6 +100,7 @@
     "settings": "Paramètres",
     "users": "Utilisateurs",
     "audit": "Journal d'audit",
+    "adminSignupRequests": "Demandes d'inscription",
     "selfService": "Mon espace",
     "myPayslips": "Mes bulletins",
     "myLeaves": "Mes congés",

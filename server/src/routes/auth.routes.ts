@@ -52,3 +52,31 @@ authRouter.get(
     res.json(toUserDTO(user));
   })
 );
+
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: z.string().min(8),
+});
+
+// Utile en particulier après une première connexion avec le mot de passe
+// temporaire généré à l'approbation d'une demande d'inscription (voir
+// routes/admin.routes.ts) — currentPassword exigé même ici, pas de
+// contournement pour "premier changement".
+authRouter.patch(
+  '/change-password',
+  authenticate,
+  asyncHandler(async (req, res) => {
+    const { currentPassword, newPassword } = changePasswordSchema.parse(req.body);
+
+    const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
+    if (!user) throw new UnauthorizedError();
+
+    const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!valid) throw new UnauthorizedError('Mot de passe actuel incorrect');
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await prisma.user.update({ where: { id: user.id }, data: { passwordHash } });
+
+    res.status(204).send();
+  })
+);

@@ -1,6 +1,7 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { LogOut, User as UserIcon } from 'lucide-react';
+import { KeyRound, LogOut, User as UserIcon } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -15,12 +16,14 @@ import { useAuthStore } from '@/store/authStore';
 import { getInitials } from '@/lib/utils';
 import { NotificationsMenu } from '@/components/layout/NotificationsMenu';
 import { WorkspaceSwitcher } from '@/components/compta/WorkspaceSwitcher';
+import { ChangePasswordDialog } from '@/components/layout/ChangePasswordDialog';
 
 export function Topbar() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
 
   const handleLogout = async () => {
     await logout();
@@ -59,6 +62,10 @@ export function Topbar() {
               <UserIcon className="mr-2 h-4 w-4" />
               {t('app.profile')}
             </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setChangePasswordOpen(true)}>
+              <KeyRound className="mr-2 h-4 w-4" />
+              Changer le mot de passe
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout}>
               <LogOut className="mr-2 h-4 w-4" />
@@ -67,6 +74,7 @@ export function Topbar() {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+      <ChangePasswordDialog open={changePasswordOpen} onOpenChange={setChangePasswordOpen} />
     </header>
   );
 }

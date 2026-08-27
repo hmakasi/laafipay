@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { User } from '@/types';
-import { login as loginApi, logout as logoutApi } from '@/services/api/auth';
+import { changePassword as changePasswordApi, login as loginApi, logout as logoutApi } from '@/services/api/auth';
 import { CompanySignupPayload, signupCompany } from '@/services/api/companies';
 import { queryClient } from '@/lib/queryClient';
 
@@ -13,6 +13,7 @@ interface AuthState {
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
   signup: (payload: CompanySignupPayload) => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   logout: () => Promise<void>;
   clearError: () => void;
 }
@@ -46,12 +47,14 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
+      // Ne connecte plus personne : la demande part en attente
+      // d'approbation par un admin LaafiPay (voir /admin/signup-requests),
+      // aucun compte/token n'existe encore à ce stade.
       signup: async (payload) => {
         set({ isLoading: true, error: null });
         try {
-          const { user, token } = await signupCompany(payload);
-          queryClient.clear();
-          set({ user, token, isAuthenticated: true, isLoading: false });
+          await signupCompany(payload);
+          set({ isLoading: false });
         } catch (err) {
           set({
             error: err instanceof Error ? err.message : 'Erreur de création',
@@ -59,6 +62,10 @@ export const useAuthStore = create<AuthState>()(
           });
           throw err;
         }
+      },
+
+      changePassword: async (currentPassword, newPassword) => {
+        await changePasswordApi(currentPassword, newPassword);
       },
 
       logout: async () => {

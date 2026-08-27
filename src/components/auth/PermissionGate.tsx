@@ -37,3 +37,12 @@ export function RequirePermission({ permission, anyOf, allOf, children }: Omit<P
   }
   return <>{children}</>;
 }
+
+// Distinct de RequirePermission : "admin LaafiPay" (équipe interne) n'a
+// rien à voir avec le système de rôles/permissions par entreprise — voir
+// server/src/lib/platformAdmin.ts.
+export function RequirePlatformAdmin({ children }: { children: ReactNode }) {
+  const isPlatformAdmin = useAuthStore((s) => s.user?.isPlatformAdmin);
+  if (!isPlatformAdmin) return <Navigate to="/dashboard" replace />;
+  return <>{children}</>;
+}

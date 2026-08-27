@@ -65,6 +65,24 @@ export interface User {
   avatar?: string;
   lastLogin?: string;
   isActive: boolean;
+  // Équipe LaafiPay (voir server/src/lib/platformAdmin.ts) — n'a rien à voir
+  // avec `role`, qui reste scopé à une entreprise.
+  isPlatformAdmin?: boolean;
+}
+
+export interface SignupRequest {
+  id: string;
+  companyName: string;
+  countryCode: CountryCode;
+  currencyCode: CurrencyCode;
+  firstName: string;
+  lastName: string;
+  email: string;
+  status: 'en_attente' | 'approuve' | 'rejete';
+  createdAt: string;
+  reviewedAt?: string;
+  reviewedBy?: string;
+  rejectionReason?: string;
 }
 
 export interface AuthState {

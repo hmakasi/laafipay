@@ -1,4 +1,5 @@
 import { CareerEvent, Employee, EmployeeDocument, User } from '@prisma/client';
+import { isPlatformAdminEmail } from './platformAdmin.js';
 
 export function toUserDTO(user: User) {
   return {
@@ -11,6 +12,7 @@ export function toUserDTO(user: User) {
     avatar: user.avatar ?? undefined,
     lastLogin: user.lastLogin?.toISOString(),
     isActive: user.isActive,
+    isPlatformAdmin: isPlatformAdminEmail(user.email),
   };
 }
 

@@ -8,7 +8,8 @@ import { cn } from '@/lib/utils';
 export function Sidebar() {
   const { t } = useTranslation();
   const role = useAuthStore((s) => s.user?.role);
-  const items = role ? ROLE_NAV_ITEMS[role] ?? [] : [];
+  const isPlatformAdmin = useAuthStore((s) => s.user?.isPlatformAdmin);
+  const items = [...(role ? ROLE_NAV_ITEMS[role] ?? [] : []), ...(isPlatformAdmin ? ['adminSignupRequests'] : [])];
 
   return (
     <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">

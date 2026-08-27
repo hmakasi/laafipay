@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Navigate, Link } from 'react-router-dom';
+import { Navigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -24,17 +24,16 @@ const signupSchema = z.object({
   firstName: z.string().min(1, 'Champ requis'),
   lastName: z.string().min(1, 'Champ requis'),
   email: z.string().min(1, 'Champ requis').email('Adresse e-mail invalide'),
-  password: z.string().min(8, 'Le mot de passe doit contenir au moins 8 caractères'),
 });
 
 type SignupFormValues = z.infer<typeof signupSchema>;
 
 export function SignupPage() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const signup = useAuthStore((s) => s.signup);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
@@ -45,7 +44,6 @@ export function SignupPage() {
       firstName: '',
       lastName: '',
       email: '',
-      password: '',
     },
   });
 
@@ -75,17 +73,34 @@ export function SignupPage() {
           firstName: values.firstName,
           lastName: values.lastName,
           email: values.email,
-          password: values.password,
         },
       });
-      toast.success(t('auth.signupSuccess'));
-      navigate('/dashboard', { replace: true });
+      setSubmitted(true);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('auth.emailAlreadyUsed'));
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  if (submitted) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl text-primary">{t('app.name')}</CardTitle>
+            <CardDescription>{t('auth.signupRequestSent')}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4 text-center text-sm text-muted-foreground">
+            <p>{t('auth.signupRequestSentDetail')}</p>
+            <Link to="/login" className="font-medium text-primary hover:underline">
+              {t('auth.login')}
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
@@ -223,19 +238,7 @@ export function SignupPage() {
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t('auth.password')}</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="••••••••" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <p className="text-xs text-muted-foreground">{t('auth.signupNoPasswordHint')}</p>
               <Button type="submit" className="w-full" disabled={isSubmitting}>
                 {isSubmitting ? t('auth.signingUp') : t('auth.signup')}
               </Button>

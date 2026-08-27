@@ -801,3 +801,35 @@ model PerformanceReview {
   @@index([employeeId])
   @@index([managerId])
 }
+
+// ── Demandes de création d'entreprise ────────────────────────────
+// Remplace l'ancien signup en libre-service (mot de passe choisi par le
+// demandeur, compte créé instantanément) : la demande est mise en attente,
+// un membre LaafiPay (voir lib/platformAdmin.ts) l'approuve manuellement
+// depuis /admin/signup-requests, ce qui crée l'entreprise + l'utilisateur
+// admin avec un mot de passe généré, envoyé par e-mail — jamais choisi par
+// le demandeur ni stocké en clair ici.
+enum SignupRequestStatus {
+  en_attente
+  approuve
+  rejete
+}
+
+model SignupRequest {
+  id           String              @id @default(cuid())
+  companyName  String
+  countryCode  String
+  currencyCode String
+  firstName    String
+  lastName     String
+  email        String
+  status       SignupRequestStatus @default(en_attente)
+  createdAt    DateTime            @default(now())
+  reviewedAt   DateTime?
+  reviewedBy   String?
+  rejectionReason String?
+  createdCompanyId String?
+  createdUserId    String?
+
+  @@index([status])
+}

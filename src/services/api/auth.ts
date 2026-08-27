@@ -17,3 +17,7 @@ export async function getCurrentUser(): Promise<User> {
 export async function logout(): Promise<void> {
   // Stateless JWT — rien à invalider côté serveur pour l'instant.
 }
+
+export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+  return apiClient.patch<void>('/auth/change-password', { currentPassword, newPassword });
+}
