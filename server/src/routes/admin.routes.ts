@@ -4,13 +4,69 @@ import { CountryCode, CurrencyCode } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { authenticate } from '../middleware/auth.js';
-import { requirePlatformAdmin } from '../lib/platformAdmin.js';
+import { isPlatformAdminEmail, requirePlatformAdmin } from '../lib/platformAdmin.js';
 import { generatePassword } from '../lib/password.js';
 import { sendAccountCredentialsEmail } from '../lib/email.js';
-import { HttpError, NotFoundError } from '../lib/errors.js';
+import { HttpError, NotFoundError, UnauthorizedError } from '../lib/errors.js';
 import bcrypt from 'bcryptjs';
 
 export const adminRouter = Router();
+
+// ── Amorçage du tout premier admin LaafiPay ──────────────────────
+// Cas particulier volontairement en dehors de authenticate/requirePlatformAdmin
+// ci-dessous : approuver une demande exige déjà un admin LaafiPay connecté,
+// donc le tout premier ne peut pas passer par ce même circuit (œuf et
+// poule). Protégé par un secret séparé plutôt que par une session, comme
+// /compta/retry-bridge (CRON_SECRET) — et par le même allow-list que le
+// reste (isPlatformAdminEmail) : impossible de créer un admin pour une
+// adresse qui n'est pas déjà dans PLATFORM_ADMIN_EMAILS. Idempotent :
+// si un compte existe déjà pour cet e-mail, renvoie une erreur plutôt que
+// d'en créer un second.
+const bootstrapSchema = z.object({
+  email: z.string().email(),
+  firstName: z.string().min(1),
+  lastName: z.string().min(1),
+  companyName: z.string().min(1),
+  countryCode: z.enum(['BF', 'BJ', 'CD']),
+  currencyCode: z.enum(['XOF', 'CDF', 'USD']),
+});
+
+adminRouter.post(
+  '/bootstrap',
+  asyncHandler(async (req, res) => {
+    const secret = process.env.BOOTSTRAP_SECRET;
+    if (!secret || req.headers.authorization !== `Bearer ${secret}`) {
+      throw new UnauthorizedError('Secret de bootstrap invalide ou non configuré');
+    }
+
+    const body = bootstrapSchema.parse(req.body);
+    if (!isPlatformAdminEmail(body.email)) {
+      throw new HttpError(403, "Cette adresse n'est pas dans PLATFORM_ADMIN_EMAILS");
+    }
+    const existingUser = await prisma.user.findUnique({ where: { email: body.email } });
+    if (existingUser) throw new HttpError(409, 'Un compte existe déjà pour cette adresse e-mail');
+
+    const password = generatePassword();
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    const company = await prisma.company.create({
+      data: { name: body.companyName, countryCode: body.countryCode, currencyCode: body.currencyCode },
+    });
+    await prisma.user.create({
+      data: {
+        companyId: company.id,
+        firstName: body.firstName,
+        lastName: body.lastName,
+        email: body.email,
+        passwordHash,
+        role: 'admin',
+      },
+    });
+
+    res.status(201).json({ email: body.email, password });
+  })
+);
+
 adminRouter.use(authenticate, requirePlatformAdmin);
 
 // ── File d'attente des demandes de création d'entreprise ─────────
