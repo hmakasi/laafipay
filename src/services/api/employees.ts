@@ -5,6 +5,7 @@ export async function getEmployees(params?: FilterParams): Promise<PaginatedResp
   const qs = buildQueryString({
     search: params?.search,
     departmentId: params?.departmentId as string | undefined,
+    managerId: params?.managerId as string | undefined,
     contractType: params?.contractType as string | undefined,
     status: params?.status as string | undefined,
     page: params?.page,

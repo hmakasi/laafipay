@@ -33,6 +33,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'settings:read',
     'settings:write',
     'audit:read',
+    'compta:access',
     'self:payslips',
     'self:leaves',
     'self:profile',
@@ -87,6 +88,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'reports:read',
     'reports:export',
     'audit:read',
+    'compta:access',
     'self:payslips',
     'self:leaves',
     'self:profile',
@@ -129,11 +131,16 @@ export const ROLE_NAV_ITEMS: Record<UserRole, string[]> = {
     'reviews',
     'reports',
   ],
+  // Pas d'"employees" ici : employees:read reste dans ROLE_PERMISSIONS
+  // (nécessaire pour résoudre les noms dans les tableaux congés/entretiens
+  // d'équipe, même pattern que "accountant" ci-dessous) mais un manager ne
+  // doit voir que congés (validation d'équipe + sa propre demande),
+  // entretiens annuels (son équipe) et reporting — pas l'annuaire complet.
   manager: [
     'dashboard',
-    'employees',
     'leaves',
     'reviews',
+    'reports',
     'self',
   ],
   accountant: [

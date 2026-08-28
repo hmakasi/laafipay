@@ -81,6 +81,12 @@ employeesRouter.get(
   asyncHandler(async (req, res) => {
     const search = typeof req.query.search === 'string' ? req.query.search : undefined;
     const departmentId = typeof req.query.departmentId === 'string' ? req.query.departmentId : undefined;
+    // managerId de la query, sur le même modèle que leaves.routes.ts/
+    // reviews.routes.ts ("mon équipe") — désigne l'Employee.id du manager,
+    // pas un User.id. Filtre optionnel : les rôles qui voient déjà tout
+    // (employees:write, ex. RH/admin) continuent de ne rien passer et
+    // reçoivent l'entreprise entière comme avant.
+    const managerId = typeof req.query.managerId === 'string' ? req.query.managerId : undefined;
     const contractType = typeof req.query.contractType === 'string' ? req.query.contractType : undefined;
     const status = typeof req.query.status === 'string' ? req.query.status : undefined;
     const page = req.query.page ? Number(req.query.page) : 1;
@@ -89,6 +95,7 @@ employeesRouter.get(
     const where: Prisma.EmployeeWhereInput = {
       companyId: req.user!.companyId,
       ...(departmentId ? { departmentId } : {}),
+      ...(managerId ? { managerId } : {}),
       ...(contractType ? { contractType: contractType as never } : {}),
       ...(status ? { status: status as never } : {}),
       ...(search

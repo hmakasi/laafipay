@@ -31,6 +31,7 @@ export type Permission =
   | 'settings:read'
   | 'settings:write'
   | 'audit:read'
+  | 'compta:access'
   | 'self:payslips'
   | 'self:leaves'
   | 'self:profile'
@@ -46,6 +47,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'reviews:read', 'reviews:write', 'reviews:manage_team',
     'reports:read', 'reports:export',
     'users:read', 'users:write', 'settings:read', 'settings:write', 'audit:read',
+    'compta:access',
     'self:payslips', 'self:leaves', 'self:profile', 'self:reviews',
   ],
   hr_manager: [
@@ -72,6 +74,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'payslips:read',
     'reports:read', 'reports:export',
     'audit:read',
+    'compta:access',
     'self:payslips', 'self:leaves', 'self:profile', 'self:reviews',
   ],
   employee: ['self:payslips', 'self:leaves', 'self:profile', 'self:reviews'],

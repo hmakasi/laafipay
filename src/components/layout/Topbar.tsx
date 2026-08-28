@@ -17,6 +17,7 @@ import { getInitials } from '@/lib/utils';
 import { NotificationsMenu } from '@/components/layout/NotificationsMenu';
 import { WorkspaceSwitcher } from '@/components/compta/WorkspaceSwitcher';
 import { ChangePasswordDialog } from '@/components/layout/ChangePasswordDialog';
+import { PermissionGate } from '@/components/auth/PermissionGate';
 
 export function Topbar() {
   const { t } = useTranslation();
@@ -34,7 +35,12 @@ export function Topbar() {
 
   return (
     <header className="flex h-16 items-center justify-between border-b bg-card px-4 md:px-6">
-      <WorkspaceSwitcher current="paie" />
+      {/* fallback={<div />} plutôt que null : préserve le 2e enfant flex du
+          header (justify-between) pour que le cluster notifications/avatar
+          reste bien à droite quand ce rôle n'a pas compta:access. */}
+      <PermissionGate permission="compta:access" fallback={<div />}>
+        <WorkspaceSwitcher current="paie" />
+      </PermissionGate>
       <div className="flex items-center gap-2">
         <NotificationsMenu />
         <DropdownMenu>

@@ -520,8 +520,10 @@
   },
   "dashboard": {
     "hrDashboard": "Tableau de bord RH",
+    "teamDashboard": "Tableau de bord équipe",
     "payrollDashboard": "Tableau de bord Paie",
     "totalHeadcount": "Effectif total",
+    "teamHeadcount": "Effectif de l'équipe",
     "totalPayroll": "Masse salariale",
     "byDepartment": "Par département",
     "byContract": "Par type de contrat",

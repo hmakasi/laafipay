@@ -50,7 +50,7 @@ function toTransactionDTO(t: TreasuryTransaction & { account: TreasuryAccount })
 
 treasuryRouter.get(
   '/accounts',
-  authorize('reports:read'),
+  authorize('compta:access'),
   asyncHandler(async (req, res) => {
     const accounts = await prisma.treasuryAccount.findMany({
       where: { companyId: req.user!.companyId },
@@ -72,7 +72,7 @@ const createAccountSchema = z.object({
 
 treasuryRouter.post(
   '/accounts',
-  authorize('payments:validate'),
+  authorize('compta:access'),
   asyncHandler(async (req, res) => {
     const body = createAccountSchema.parse(req.body);
     if (body.kind === 'mobile_money' && !body.provider) {
@@ -90,7 +90,7 @@ treasuryRouter.post(
 
 treasuryRouter.get(
   '/transactions',
-  authorize('reports:read'),
+  authorize('compta:access'),
   asyncHandler(async (req, res) => {
     const companyId = req.user!.companyId;
     const accountId = typeof req.query.accountId === 'string' ? req.query.accountId : undefined;
@@ -123,7 +123,7 @@ const importSchema = z.object({
 // versement de salaire connu sont rapprochés automatiquement.
 treasuryRouter.post(
   '/accounts/:id/import',
-  authorize('payments:validate'),
+  authorize('compta:access'),
   asyncHandler(async (req, res) => {
     const companyId = req.user!.companyId;
     const account = await prisma.treasuryAccount.findFirst({ where: { id: req.params.id, companyId } });
@@ -181,7 +181,7 @@ const reconcileSchema = z.discriminatedUnion('statut', [
 
 treasuryRouter.patch(
   '/transactions/:id',
-  authorize('payments:validate'),
+  authorize('compta:access'),
   asyncHandler(async (req, res) => {
     const companyId = req.user!.companyId;
     const tx = await prisma.treasuryTransaction.findFirst({ where: { id: req.params.id, companyId } });

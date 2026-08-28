@@ -66,7 +66,14 @@ export function DashboardPage() {
   // `formatCurrency` retombe sur XOF/FCFA par défaut tant que la requête
   // n'a pas résolu — comportement inchangé pour les entreprises BF/BJ.
   const currencyCode = company?.currencyCode;
-  const { data: employeesPage, isLoading: loadingEmployees } = useEmployeesQuery({ perPage: 1000 });
+  // Un manager ne voit que son équipe (ses subordonnés directs, même notion
+  // que "mon équipe" côté congés/entretiens — Employee.managerId, pas un
+  // User.id) : le tableau de bord entier (effectif, répartition, alertes)
+  // en découle puisque tout est dérivé du tableau `employees` ci-dessous.
+  const isManager = user?.role === 'manager';
+  const { data: employeesPage, isLoading: loadingEmployees } = useEmployeesQuery(
+    isManager ? { managerId: user?.employeeId, perPage: 1000 } : { perPage: 1000 }
+  );
   const { data: departments } = useDepartmentsQuery();
   const { data: cycles, isLoading: loadingCycles } = usePayrollCyclesQuery();
   const { data: paymentOrders } = usePaymentOrdersQuery();
@@ -82,7 +89,14 @@ export function DashboardPage() {
     cout: c.totalEmployerCost,
   }));
 
-  const byDepartment = (departments ?? []).map((d) => ({
+  // Pour un manager, ne liste que les départements réellement représentés
+  // dans son équipe (déjà filtrée par managerId ci-dessus) plutôt que tous
+  // les départements de l'entreprise — sinon le graphique afficherait une
+  // rangée de barres à zéro pour chaque département hors de son équipe.
+  const departmentsInScope = isManager
+    ? (departments ?? []).filter((d) => employees.some((e) => e.departmentId === d.id))
+    : departments ?? [];
+  const byDepartment = departmentsInScope.map((d) => ({
     name: d.code,
     count: employees.filter((e) => e.departmentId === d.id).length,
   }));
@@ -115,7 +129,11 @@ export function DashboardPage() {
       <div>
         <h1 className="text-2xl font-semibold">
           {t('app.name')}
-          {user && <span className="ml-2 text-lg font-normal text-muted-foreground">— {t('dashboard.hrDashboard')}</span>}
+          {user && (
+            <span className="ml-2 text-lg font-normal text-muted-foreground">
+              — {t(isManager ? 'dashboard.teamDashboard' : 'dashboard.hrDashboard')}
+            </span>
+          )}
         </h1>
         <p className="text-sm text-muted-foreground">
           {user?.firstName}, {t(`roles.${user?.role}`)}
@@ -123,8 +141,18 @@ export function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard icon={Users} label={t('dashboard.totalHeadcount')} value={String(activeEmployees.length)} loading={loadingEmployees} />
-        <StatCard icon={Building2} label={t('dashboard.byDepartment')} value={String(departments?.length ?? 0)} loading={loadingEmployees} />
+        <StatCard
+          icon={Users}
+          label={t(isManager ? 'dashboard.teamHeadcount' : 'dashboard.totalHeadcount')}
+          value={String(activeEmployees.length)}
+          loading={loadingEmployees}
+        />
+        <StatCard
+          icon={Building2}
+          label={t('dashboard.byDepartment')}
+          value={String(departmentsInScope.length)}
+          loading={loadingEmployees}
+        />
         <StatCard
           icon={Wallet}
           label={t('dashboard.totalPayroll')}

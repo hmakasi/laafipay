@@ -45,6 +45,8 @@ export type Permission =
   | 'settings:read'
   | 'settings:write'
   | 'audit:read'
+  // LaafiCompta — réservé admin/comptable, voir ROLE_PERMISSIONS
+  | 'compta:access'
   // Self-service
   | 'self:payslips'
   | 'self:leaves'

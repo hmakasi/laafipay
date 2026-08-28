@@ -228,7 +228,14 @@ export function AppRouter() {
             />
           </Route>
 
-          <Route path="compta" element={<ComptaLayout />}>
+          <Route
+            path="compta"
+            element={
+              <RequirePermission permission="compta:access">
+                <ComptaLayout />
+              </RequirePermission>
+            }
+          >
             <Route index element={<ComptaDashboardPage />} />
             <Route path="passerelle-paie" element={<PasserellePaiePage />} />
             <Route path="whatsapp" element={<WhatsAppAccountingPage />} />

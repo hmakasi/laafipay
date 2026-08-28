@@ -100,7 +100,7 @@ comptaRouter.get(
 comptaRouter.get(
   '/bridge-events',
   authenticate,
-  authorize('payroll:read'),
+  authorize('compta:access'),
   asyncHandler(async (req, res) => {
     const companyId = req.user!.companyId;
 
@@ -156,16 +156,17 @@ comptaRouter.get(
 
 // ── Validation du paiement par la comptabilité ──────────────────
 // Contrôle interne distinct de la clôture du cycle côté LaafiPay :
-// `payments:initiate` (RH/hr_manager) prépare, `payments:validate`
-// (accountant/admin — voir lib/permissions.ts) autorise. On ne fait pas
-// confiance à un `validatedBy` envoyé par le client : l'identité vient du
-// JWT de la personne qui appelle, pas d'un champ de formulaire.
+// `payments:initiate` (RH/hr_manager) prépare côté LaafiPay, la validation
+// comptable ici est réservée à `compta:access` (accountant/admin — voir
+// lib/permissions.ts). On ne fait pas confiance à un `validatedBy` envoyé
+// par le client : l'identité vient du JWT de la personne qui appelle, pas
+// d'un champ de formulaire.
 const paymentValidationSchema = z.object({ validated: z.boolean() });
 
 comptaRouter.patch(
   '/journal-entries/:id/payment-validation',
   authenticate,
-  authorize('payments:validate'),
+  authorize('compta:access'),
   asyncHandler(async (req, res) => {
     const { validated } = paymentValidationSchema.parse(req.body);
     const companyId = req.user!.companyId;
@@ -200,7 +201,7 @@ comptaRouter.patch(
 comptaRouter.get(
   '/fiscal-deadlines',
   authenticate,
-  authorize('payroll:read'),
+  authorize('compta:access'),
   asyncHandler(async (req, res) => {
     const companyId = req.user!.companyId;
     const company = await prisma.company.findUnique({ where: { id: companyId }, select: { countryCode: true } });
@@ -250,7 +251,7 @@ comptaRouter.get(
 comptaRouter.get(
   '/journal-entries',
   authenticate,
-  authorize('payroll:read'),
+  authorize('compta:access'),
   asyncHandler(async (req, res) => {
     const companyId = req.user!.companyId;
     const journal = typeof req.query.journal === 'string' ? req.query.journal : undefined;
@@ -285,7 +286,7 @@ comptaRouter.get(
 comptaRouter.get(
   '/trial-balance',
   authenticate,
-  authorize('payroll:read'),
+  authorize('compta:access'),
   asyncHandler(async (req, res) => {
     const companyId = req.user!.companyId;
 
@@ -325,7 +326,7 @@ comptaRouter.get(
 comptaRouter.get(
   '/chart-of-accounts',
   authenticate,
-  authorize('payroll:read'),
+  authorize('compta:access'),
   asyncHandler(async (req, res) => {
     const companyId = req.user!.companyId;
 
