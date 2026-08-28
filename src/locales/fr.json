@@ -126,6 +126,11 @@
       "copied": "Lien copié",
       "emailSubject": "Complétez votre dossier LaafiPay"
     },
+    "account": {
+      "createdEmailSent": "Compte de connexion créé, identifiants envoyés à {{email}}",
+      "createdEmailFailed": "Compte créé mais l'e-mail n'a pas pu être envoyé. Mot de passe temporaire à transmettre manuellement : {{password}}",
+      "skippedEmailInUse": "Aucun compte de connexion créé : {{email}} est déjà utilisée par un autre compte"
+    },
     "totalEmployees": "Total employés",
     "search": "Rechercher un employé...",
     "filterByDepartment": "Département",

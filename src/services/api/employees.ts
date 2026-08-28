@@ -18,8 +18,19 @@ export async function getEmployee(id: string): Promise<Employee> {
   return apiClient.get<Employee>(`/employees/${id}`);
 }
 
-export async function createEmployee(data: Omit<Employee, 'id' | 'documents' | 'careerHistory'>): Promise<Employee> {
-  return apiClient.post<Employee>('/employees', data);
+// Renvoyé en plus de la fiche employé par POST /employees : le serveur
+// provisionne automatiquement un compte de connexion (role "employee") pour
+// la nouvelle fiche — voir employees.routes.ts. `created: false` seulement
+// si l'adresse e-mail est déjà utilisée par un autre compte (aucun nouveau
+// compte créé, la fiche employé est quand même créée normalement).
+export type EmployeeAccountProvisioning =
+  | { created: true; emailSent: boolean; temporaryPassword?: string }
+  | { created: false; reason: 'email_deja_utilise' };
+
+export async function createEmployee(
+  data: Omit<Employee, 'id' | 'documents' | 'careerHistory'>
+): Promise<Employee & { accountProvisioning: EmployeeAccountProvisioning }> {
+  return apiClient.post('/employees', data);
 }
 
 export async function updateEmployee(id: string, data: Partial<Employee>): Promise<Employee> {

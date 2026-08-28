@@ -177,6 +177,18 @@ export function EmployeeFormPage() {
       } else {
         const created = await createMutation.mutateAsync(payload);
         toast.success(t('app.save'));
+        if (created.accountProvisioning.created) {
+          if (created.accountProvisioning.emailSent) {
+            toast.success(t('employees.account.createdEmailSent', { email: created.email }));
+          } else {
+            toast.warning(
+              t('employees.account.createdEmailFailed', { password: created.accountProvisioning.temporaryPassword }),
+              { duration: 30_000 }
+            );
+          }
+        } else {
+          toast.info(t('employees.account.skippedEmailInUse', { email: created.email }));
+        }
         if (isInviteFlow) {
           const { token } = await inviteMutation.mutateAsync(created.id);
           setInviteResult({

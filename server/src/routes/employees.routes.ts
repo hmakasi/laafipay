@@ -3,6 +3,7 @@ import { Readable } from 'stream';
 import path from 'path';
 import { Router } from 'express';
 import multer from 'multer';
+import bcrypt from 'bcryptjs';
 import { put, get, del } from '@vercel/blob';
 import { z } from 'zod';
 import { AmendmentType, CareerEventType, Contract, ContractAmendment, DocumentType, Prisma } from '@prisma/client';
@@ -12,6 +13,8 @@ import { toEmployeeDTO } from '../lib/dto.js';
 import { authenticate, authorize } from '../middleware/auth.js';
 import { ForbiddenError, HttpError, NotFoundError } from '../lib/errors.js';
 import { hasPermission } from '../lib/permissions.js';
+import { generatePassword } from '../lib/password.js';
+import { sendEmployeeAccountCredentialsEmail } from '../lib/email.js';
 
 export const employeesRouter = Router();
 employeesRouter.use(authenticate);
@@ -28,6 +31,50 @@ employeesRouter.use(authenticate);
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } }); // 10 Mo
 
 const include = { documents: true, careerHistory: true };
+
+// Auto-provisionnement du compte de connexion à la création d'un employé —
+// jusqu'ici, la seule façon d'obtenir un compte était la page "Utilisateurs"
+// (création manuelle, mot de passe choisi par l'admin) ; le lien d'invitation
+// (POST /:id/invite, onboarding.routes.ts) ne crée lui aucun User, il ne
+// sert qu'à faire compléter des infos RH restantes par le salarié. Toujours
+// role "employee" (self-service de base) — un rôle supérieur reste à donner
+// manuellement via "Utilisateurs" si besoin. Jamais bloquant : si l'e-mail
+// de l'employé est déjà utilisé par un autre compte, la création de
+// l'employé aboutit quand même, simplement sans nouveau compte.
+type AccountProvisioning =
+  | { created: true; emailSent: boolean; temporaryPassword?: string }
+  | { created: false; reason: 'email_deja_utilise' };
+
+async function provisionEmployeeAccount(
+  employee: { id: string; companyId: string; firstName: string; lastName: string; email: string },
+  companyName: string
+): Promise<AccountProvisioning> {
+  const existing = await prisma.user.findUnique({ where: { email: employee.email } });
+  if (existing) return { created: false, reason: 'email_deja_utilise' };
+
+  const password = generatePassword();
+  const passwordHash = await bcrypt.hash(password, 10);
+  await prisma.user.create({
+    data: {
+      companyId: employee.companyId,
+      firstName: employee.firstName,
+      lastName: employee.lastName,
+      email: employee.email,
+      passwordHash,
+      role: 'employee',
+      employeeId: employee.id,
+      mustChangePassword: true,
+    },
+  });
+
+  const emailResult = await sendEmployeeAccountCredentialsEmail(employee.email, {
+    firstName: employee.firstName,
+    companyName,
+    password,
+  });
+
+  return emailResult.ok ? { created: true, emailSent: true } : { created: true, emailSent: false, temporaryPassword: password };
+}
 
 function toAmendmentDTO(a: ContractAmendment) {
   return {
@@ -197,6 +244,14 @@ employeesRouter.post(
 
     const department = await prisma.department.findFirst({ where: { id: body.departmentId, companyId } });
     if (!department) throw new NotFoundError(`Département ${body.departmentId} introuvable`);
+    // Sans ce contrôle explicite, la contrainte @@unique([companyId, email])
+    // du schéma remontait une PrismaClientKnownRequestError (P2002) non
+    // interceptée jusqu'au handler générique de app.ts, qui répondait 500
+    // "Erreur serveur" — masquant la vraie cause (e-mail déjà pris par un
+    // autre employé de cette entreprise) à la personne qui remplit le
+    // formulaire.
+    const existingEmployee = await prisma.employee.findFirst({ where: { companyId, email: body.email } });
+    if (existingEmployee) throw new HttpError(409, 'Un employé existe déjà avec cette adresse e-mail');
     if (body.managerId) {
       const manager = await prisma.employee.findFirst({ where: { id: body.managerId, companyId } });
       if (!manager) throw new NotFoundError(`Manager ${body.managerId} introuvable`);
@@ -271,7 +326,11 @@ employeesRouter.post(
       },
       include,
     });
-    res.status(201).json(toEmployeeDTO(employee));
+
+    const company = await prisma.company.findUnique({ where: { id: companyId }, select: { name: true } });
+    const accountProvisioning = await provisionEmployeeAccount(employee, company?.name ?? '');
+
+    res.status(201).json({ ...toEmployeeDTO(employee), accountProvisioning });
   })
 );
 
