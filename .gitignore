@@ -28,3 +28,5 @@ server/dist
 *.sw?
 
 .vercel
+
+.worktrees
