@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { resolveEmployeeByWhatsAppPhone, getActiveSession, startSession } from '../lib/whatsappSession.js';
 import { sendWhatsAppTextMessage } from '../lib/whatsapp.js';
 import { PAYSLIP_FLOW, handlePayslipFlowMessage } from '../lib/whatsappFlows/payslip.js';
+import { LEAVE_FLOW, startLeaveFlow, handleLeaveFlowMessage } from '../lib/whatsappFlows/leave.js';
 import { prisma } from '../lib/prisma.js';
 
 export const whatsappWebhookRouter = Router();
@@ -83,6 +84,13 @@ whatsappWebhookRouter.post('/webhook', async (req: Request & { rawBody?: Buffer 
 
   const session = await getActiveSession(incoming.from);
   if (!session) {
+    const isLeaveTrigger = (incoming.kind === 'text' && /demander un cong/i.test(incoming.text)) || (incoming.kind === 'button_reply' && incoming.id === 'demander_conge');
+    if (isLeaveTrigger) {
+      await startLeaveFlow(employee, incoming.from);
+      res.sendStatus(200);
+      return;
+    }
+
     // Déclencheur : l'employé a cliqué sur "Obtenir mon bulletin" (bouton du
     // template bulletin_disponible). Le clic arrive comme un message de type
     // "button" (bouton de template, pas interactive) — voir la doc Meta sur
@@ -101,6 +109,12 @@ whatsappWebhookRouter.post('/webhook', async (req: Request & { rawBody?: Buffer 
 
   if (session.flow === PAYSLIP_FLOW) {
     await handlePayslipFlowMessage(session, employee, incoming);
+    res.sendStatus(200);
+    return;
+  }
+
+  if (session.flow === LEAVE_FLOW) {
+    await handleLeaveFlowMessage(session, employee, incoming);
     res.sendStatus(200);
     return;
   }
