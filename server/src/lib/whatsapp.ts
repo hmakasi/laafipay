@@ -109,3 +109,22 @@ export async function sendLeaveManagerNotification(
   const languageCode = process.env.WHATSAPP_TEMPLATE_LANG ?? 'fr';
   return sendWhatsAppTemplate(managerPhone, countryCode, templateName, languageCode, [params.employeeName, params.startDate, params.endDate]);
 }
+
+// Notifie l'employé de la décision (validée/refusée) prise sur sa demande de
+// congé, qu'elle vienne du portail ou d'un futur flux WhatsApp. Le template
+// doit être créé et approuvé dans Meta Business Manager au préalable (voir
+// docs/superpowers/specs/2026-08-30-whatsapp-bot-design.md) — tant qu'il ne
+// l'est pas, renvoie un échec propre plutôt que de planter.
+export async function sendLeaveDecisionNotification(
+  employeePhone: string,
+  countryCode: string,
+  decision: 'valide' | 'refuse',
+  params: { startDate: string; endDate: string }
+): Promise<WhatsAppSendResult> {
+  const templateName =
+    decision === 'valide'
+      ? (process.env.WHATSAPP_LEAVE_APPROVED_TEMPLATE_NAME ?? 'conge_valide')
+      : (process.env.WHATSAPP_LEAVE_REFUSED_TEMPLATE_NAME ?? 'conge_refuse');
+  const languageCode = process.env.WHATSAPP_TEMPLATE_LANG ?? 'fr';
+  return sendWhatsAppTemplate(employeePhone, countryCode, templateName, languageCode, [params.startDate, params.endDate]);
+}

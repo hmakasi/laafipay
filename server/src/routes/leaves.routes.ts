@@ -8,6 +8,7 @@ import { ForbiddenError, NotFoundError } from '../lib/errors.js';
 import { hasPermission } from '../lib/permissions.js';
 import { computeCongePayeAccrual } from '../lib/leaveAccrual.js';
 import { createLeaveRequestRecord } from '../lib/leaveRequests.js';
+import { sendLeaveDecisionNotification } from '../lib/whatsapp.js';
 
 export const leavesRouter = Router();
 leavesRouter.use(authenticate);
@@ -379,6 +380,14 @@ leavesRouter.post(
       }),
     ]);
 
+    const decisionEmployee = await prisma.employee.findUnique({ where: { id: request.employeeId }, include: { company: { select: { countryCode: true } } } });
+    if (decisionEmployee) {
+      await sendLeaveDecisionNotification(decisionEmployee.phone, decisionEmployee.company.countryCode, 'valide', {
+        startDate: dateOnly(request.startDate),
+        endDate: dateOnly(request.endDate),
+      });
+    }
+
     res.json(toLeaveRequestDTO(updated));
   })
 );
@@ -408,6 +417,14 @@ leavesRouter.post(
         data: { pending: { decrement: request.daysCount } },
       }),
     ]);
+
+    const decisionEmployee = await prisma.employee.findUnique({ where: { id: request.employeeId }, include: { company: { select: { countryCode: true } } } });
+    if (decisionEmployee) {
+      await sendLeaveDecisionNotification(decisionEmployee.phone, decisionEmployee.company.countryCode, 'refuse', {
+        startDate: dateOnly(request.startDate),
+        endDate: dateOnly(request.endDate),
+      });
+    }
 
     res.json(toLeaveRequestDTO(updated));
   })
