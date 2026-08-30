@@ -24,6 +24,7 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
+    "jspdf": "^4.2.1",
     "multer": "^2.2.0",
     "resend": "^6.24.0",
     "zod": "^3.25.76"
