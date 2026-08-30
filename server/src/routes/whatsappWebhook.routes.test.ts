@@ -97,12 +97,4 @@ describe('POST /api/whatsapp/webhook', () => {
     expect(mockSendText).not.toHaveBeenCalled();
   });
 
-  it('acknowledges with 200 for a known employee with no active session (placeholder reply)', async () => {
-    mockResolveEmployee.mockResolvedValue({ id: 'e1', phone: '70123456', company: { countryCode: 'BF' } });
-    mockGetActiveSession.mockResolvedValue(null);
-    const body = { entry: [{ changes: [{ value: { messages: [{ from: '22670123456', type: 'text', text: { body: 'hi' } }] } }] }] };
-    const res = await signedRequest(body);
-    expect(res.status).toBe(200);
-    expect(mockSendText).toHaveBeenCalledWith('22670123456', expect.any(String));
-  });
 });

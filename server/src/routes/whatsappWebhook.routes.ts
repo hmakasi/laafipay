@@ -1,7 +1,9 @@
 import { Router, Request } from 'express';
 import crypto from 'crypto';
-import { resolveEmployeeByWhatsAppPhone, getActiveSession } from '../lib/whatsappSession.js';
+import { resolveEmployeeByWhatsAppPhone, getActiveSession, startSession } from '../lib/whatsappSession.js';
 import { sendWhatsAppTextMessage } from '../lib/whatsapp.js';
+import { PAYSLIP_FLOW, handlePayslipFlowMessage } from '../lib/whatsappFlows/payslip.js';
+import { prisma } from '../lib/prisma.js';
 
 export const whatsappWebhookRouter = Router();
 
@@ -81,9 +83,24 @@ whatsappWebhookRouter.post('/webhook', async (req: Request & { rawBody?: Buffer 
 
   const session = await getActiveSession(incoming.from);
   if (!session) {
-    // Remplacé par le vrai routeur de déclenchement de flux dans les
-    // tâches 14 (bulletin) et 15 (congé).
-    await sendWhatsAppTextMessage(incoming.from, "Bonjour ! Cette fonctionnalité est en cours de configuration.");
+    // Déclencheur : l'employé a cliqué sur "Obtenir mon bulletin" (bouton du
+    // template bulletin_disponible). Le clic arrive comme un message de type
+    // "button" (bouton de template, pas interactive) — voir la doc Meta sur
+    // les quick-reply buttons de template.
+    const latestPayslip = await prisma.payslip.findFirst({ where: { employeeId: employee.id, whatsappStatus: 'envoye' }, orderBy: { generatedAt: 'desc' } });
+    if (!latestPayslip) {
+      await sendWhatsAppTextMessage(incoming.from, "Aucun bulletin n'est disponible pour le moment.");
+      res.sendStatus(200);
+      return;
+    }
+    const newSession = await startSession({ phone: incoming.from, employeeId: employee.id, flow: PAYSLIP_FLOW, step: 'awaiting_pin', data: { payslipId: latestPayslip.id } });
+    await handlePayslipFlowMessage(newSession, employee, { from: incoming.from, kind: 'text', text: '' });
+    res.sendStatus(200);
+    return;
+  }
+
+  if (session.flow === PAYSLIP_FLOW) {
+    await handlePayslipFlowMessage(session, employee, incoming);
     res.sendStatus(200);
     return;
   }
