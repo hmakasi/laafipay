@@ -27,23 +27,15 @@ export interface WhatsAppSendResult {
   error?: string;
 }
 
-// Envoie une notification "bulletin disponible" via un message template
-// Meta Cloud API — obligatoire ici : on contacte l'employé en dehors de
-// toute fenêtre de conversation ouverte (il ne vient pas de nous écrire),
-// donc un message texte libre serait rejeté par l'API. Le template doit
-// être créé et approuvé dans Meta Business Manager au préalable (voir
-// WHATSAPP_TEMPLATE_NAME) — tant qu'il ne l'est pas, cette fonction
-// renvoie un échec propre (ok: false) plutôt que de planter, pour que
-// l'appelant puisse l'enregistrer sur le bulletin (whatsappStatus=echoue).
-export async function sendPayslipWhatsAppNotification(
+async function sendWhatsAppTemplate(
   toPhone: string,
   countryCode: string,
-  params: { employeeName: string; period: string; montantNet: string }
+  templateName: string,
+  languageCode: string,
+  bodyParams: string[]
 ): Promise<WhatsAppSendResult> {
   const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
   const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
-  const templateName = process.env.WHATSAPP_TEMPLATE_NAME ?? 'bulletin_disponible';
-  const languageCode = process.env.WHATSAPP_TEMPLATE_LANG ?? 'fr';
 
   if (!phoneNumberId || !accessToken) {
     return { ok: false, error: 'WHATSAPP_PHONE_NUMBER_ID / WHATSAPP_ACCESS_TOKEN non configurés' };
@@ -65,16 +57,7 @@ export async function sendPayslipWhatsAppNotification(
         template: {
           name: templateName,
           language: { code: languageCode },
-          components: [
-            {
-              type: 'body',
-              parameters: [
-                { type: 'text', text: params.employeeName },
-                { type: 'text', text: params.period },
-                { type: 'text', text: params.montantNet },
-              ],
-            },
-          ],
+          components: [{ type: 'body', parameters: bodyParams.map((text) => ({ type: 'text', text })) }],
         },
       }),
     });
@@ -93,4 +76,36 @@ export async function sendPayslipWhatsAppNotification(
   } finally {
     clearTimeout(timeout);
   }
+}
+
+// Envoie une notification "bulletin disponible" via un message template
+// Meta Cloud API — obligatoire ici : on contacte l'employé en dehors de
+// toute fenêtre de conversation ouverte (il ne vient pas de nous écrire),
+// donc un message texte libre serait rejeté par l'API. Le template doit
+// être créé et approuvé dans Meta Business Manager au préalable (voir
+// WHATSAPP_TEMPLATE_NAME) — tant qu'il ne l'est pas, cette fonction
+// renvoie un échec propre (ok: false) plutôt que de planter, pour que
+// l'appelant puisse l'enregistrer sur le bulletin (whatsappStatus=echoue).
+export async function sendPayslipWhatsAppNotification(
+  toPhone: string,
+  countryCode: string,
+  params: { employeeName: string; period: string; montantNet: string }
+): Promise<WhatsAppSendResult> {
+  const templateName = process.env.WHATSAPP_TEMPLATE_NAME ?? 'bulletin_disponible';
+  const languageCode = process.env.WHATSAPP_TEMPLATE_LANG ?? 'fr';
+  return sendWhatsAppTemplate(toPhone, countryCode, templateName, languageCode, [params.employeeName, params.period, params.montantNet]);
+}
+
+// Notifie le manager d'une nouvelle demande de congé (portail ou WhatsApp).
+// Le template doit être créé et approuvé dans Meta Business Manager au
+// préalable (voir docs/superpowers/specs/2026-08-30-whatsapp-bot-design.md) —
+// tant qu'il ne l'est pas, renvoie un échec propre plutôt que de planter.
+export async function sendLeaveManagerNotification(
+  managerPhone: string,
+  countryCode: string,
+  params: { employeeName: string; startDate: string; endDate: string }
+): Promise<WhatsAppSendResult> {
+  const templateName = process.env.WHATSAPP_LEAVE_MANAGER_TEMPLATE_NAME ?? 'demande_conge_manager';
+  const languageCode = process.env.WHATSAPP_TEMPLATE_LANG ?? 'fr';
+  return sendWhatsAppTemplate(managerPhone, countryCode, templateName, languageCode, [params.employeeName, params.startDate, params.endDate]);
 }
