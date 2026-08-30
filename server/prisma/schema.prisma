@@ -251,6 +251,7 @@ model Company {
   employees            Employee[]
   departments          Department[]
   payrollConfig        PayrollConfig?
+  reviewConfig         ReviewConfig?
   legalSettings        LegalSettings[]
   payrollCycles        PayrollCycle[]
   payslips             Payslip[]
@@ -263,6 +264,8 @@ model Company {
   paymentOrders        PaymentOrder[]
   treasuryAccounts     TreasuryAccount[]
   treasuryTransactions TreasuryTransaction[]
+  notifications        Notification[]
+  peerFeedbackRequests PeerFeedbackRequest[]
 }
 
 // Rubriques de bulletin activées par l'entreprise (PayrollComponentsSetup.tsx).
@@ -278,6 +281,20 @@ model PayrollConfig {
   customRubrics Json
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+}
+
+// Compétences évaluées lors des entretiens annuels (ReviewFormDialog.tsx),
+// même miroir que PayrollConfig — un JSON de string[] plutôt qu'une table à
+// part : pas de champs propres par compétence (contrairement aux rubriques
+// de paie), juste un libellé. GET /companies/review-config renvoie une liste
+// par défaut (lib/reviewCompetencies.ts) tant que rien n'est configuré.
+model ReviewConfig {
+  id           String   @id @default(cuid())
+  companyId    String   @unique
+  company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  competencies Json
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model User {
@@ -306,6 +323,44 @@ model User {
   isActive     Boolean   @default(true)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+  notifications Notification[]
+}
+
+enum NotificationType {
+  bulletin_disponible
+  conge_valide
+  conge_refuse
+  paiement_effectue
+  paiement_echoue
+  contrat_expire
+  essai_termine
+  action_requise
+  entretien_ouvert
+  entretien_a_completer
+  entretien_termine
+  avis_pair_demande
+  avis_pair_soumis
+}
+
+// Créées exclusivement côté serveur (lib/notifications.ts), jamais via une
+// route POST publique — toujours en conséquence directe d'une mutation déjà
+// authentifiée/autorisée ailleurs (approbation de congé, ouverture de cycle
+// d'entretien, etc.), jamais à la demande d'un client.
+model Notification {
+  id        String           @id @default(cuid())
+  companyId String
+  company   Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  title     String
+  message   String
+  link      String?
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  @@index([userId, read])
+  @@index([companyId])
 }
 
 model Department {
@@ -394,6 +449,7 @@ model Employee {
   leaveBalances       LeaveBalance[]
   performanceReviews  PerformanceReview[]
   paymentTransactions PaymentTransaction[]
+  peerFeedbackRequests PeerFeedbackRequest[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -799,22 +855,54 @@ model PerformanceReview {
 
   objectives      String?
   selfAssessment  String?
-  selfRating      Int?
-  selfSubmittedAt DateTime?
+  // Note globale — désormais calculée côté serveur (moyenne arrondie de
+  // selfCompetencyRatings) plutôt que saisie directement, conservée telle
+  // quelle pour ne rien casser côté lecture (dashboard, DTO existants).
+  selfRating              Int?
+  selfCompetencyRatings   Json? // {competency: string, rating: number}[]
+  selfSubmittedAt         DateTime?
 
-  managerAssessment  String?
-  managerRating      Int?
-  nextObjectives     String?
-  managerSubmittedAt DateTime?
+  managerAssessment          String?
+  managerRating               Int?
+  managerCompetencyRatings    Json? // {competency: string, rating: number}[]
+  nextObjectives              String?
+  managerSubmittedAt          DateTime?
 
   completedAt DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
+  peerFeedbackRequests PeerFeedbackRequest[]
+
   @@unique([cycleId, employeeId])
   @@index([companyId])
   @@index([employeeId])
   @@index([managerId])
+}
+
+// Une seule ligne par (review, pair) plutôt qu'une table demande + une table
+// réponse séparées : submittedAt nul = en attente, même idiome que
+// PerformanceReview.selfSubmittedAt/managerSubmittedAt sur une seule ligne.
+// Visibilité : réservée au manager/RH (reviews.routes.ts canViewPeerFeedback)
+// — la personne évaluée n'y a pas accès en v1, pour un feedback de pairs
+// candide sans auto-censure.
+model PeerFeedbackRequest {
+  id             String             @id @default(cuid())
+  companyId      String
+  company        Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  reviewId       String
+  review         PerformanceReview  @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  peerEmployeeId String
+  peerEmployee   Employee           @relation(fields: [peerEmployeeId], references: [id], onDelete: Cascade)
+  requestedBy    String
+  requestedAt    DateTime           @default(now())
+  feedback       String?
+  rating         Int?
+  submittedAt    DateTime?
+
+  @@unique([reviewId, peerEmployeeId])
+  @@index([companyId])
+  @@index([peerEmployeeId])
 }
 
 // ── Demandes de création d'entreprise ────────────────────────────

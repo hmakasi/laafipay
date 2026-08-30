@@ -553,6 +553,11 @@ export interface ReviewCycle {
   incompleteCount?: number;
 }
 
+export interface CompetencyRating {
+  competency: string;
+  rating: number;
+}
+
 export interface PerformanceReview {
   id: string;
   cycleId: string;
@@ -562,15 +567,48 @@ export interface PerformanceReview {
   status: ReviewStatus;
   objectives?: string;
   selfAssessment?: string;
+  // Note globale — calculée côté serveur (moyenne arrondie de
+  // selfCompetencyRatings), pas saisie directement.
   selfRating?: number;
+  selfCompetencyRatings?: CompetencyRating[];
   selfSubmittedAt?: string;
   managerAssessment?: string;
   managerRating?: number;
+  managerCompetencyRatings?: CompetencyRating[];
   nextObjectives?: string;
   managerSubmittedAt?: string;
   completedAt?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ReviewCycleStats {
+  total: number;
+  completed: number;
+  inProgress: number;
+  notStarted: number;
+  averageSelfRating?: number;
+  averageManagerRating?: number;
+  byDepartment: { departmentId: string; name: string; total: number; completed: number }[];
+}
+
+export interface PeerFeedbackRequest {
+  id: string;
+  reviewId: string;
+  peerEmployeeId: string;
+  requestedBy: string;
+  requestedAt: string;
+  feedback?: string;
+  rating?: number;
+  submittedAt?: string;
+}
+
+// Renvoyé uniquement par GET /reviews/peer-feedback-requests/mine — les
+// demandes qui me sont adressées, avec le contexte nécessaire à l'affichage
+// (qui est évalué, dans quel cycle) sans requête supplémentaire.
+export interface MyPeerFeedbackRequest extends PeerFeedbackRequest {
+  revieweeName: string;
+  cycle: { name: string; year: number; status: ReviewCycleStatus };
 }
 
 // ============================================================
@@ -585,7 +623,12 @@ export type NotificationType =
   | 'paiement_echoue'
   | 'contrat_expire'
   | 'essai_termine'
-  | 'action_requise';
+  | 'action_requise'
+  | 'entretien_ouvert'
+  | 'entretien_a_completer'
+  | 'entretien_termine'
+  | 'avis_pair_demande'
+  | 'avis_pair_soumis';
 
 export interface Notification {
   id: string;

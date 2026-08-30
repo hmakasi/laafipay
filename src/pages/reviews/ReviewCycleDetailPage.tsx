@@ -20,7 +20,13 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { PermissionGate } from '@/components/auth/PermissionGate';
-import { useOpenReviewCycleMutation, useCloseReviewCycleMutation, useReviewCycleQuery, useReviewsQuery } from '@/hooks/useReviews';
+import {
+  useOpenReviewCycleMutation,
+  useCloseReviewCycleMutation,
+  useReviewCycleQuery,
+  useReviewCycleStatsQuery,
+  useReviewsQuery,
+} from '@/hooks/useReviews';
 import { useEmployeesQuery } from '@/hooks/useEmployees';
 import { REVIEW_CYCLE_STATUS_VARIANT, REVIEW_STATUS_VARIANT } from '@/lib/constants';
 import { formatDate } from '@/lib/utils';
@@ -33,6 +39,7 @@ export function ReviewCycleDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { data: cycle, isLoading } = useReviewCycleQuery(id);
   const { data: reviews, isLoading: loadingReviews } = useReviewsQuery({ cycleId: id });
+  const { data: stats } = useReviewCycleStatsQuery(id);
   const { data: employeesPage } = useEmployeesQuery({ perPage: 1000 });
   const openMutation = useOpenReviewCycleMutation();
   const closeMutation = useCloseReviewCycleMutation();
@@ -135,6 +142,52 @@ export function ReviewCycleDetailPage() {
           <Badge variant={REVIEW_CYCLE_STATUS_VARIANT[cycle.status]}>{t(`reviews.status_${cycle.status}`)}</Badge>
         </CardHeader>
       </Card>
+
+      {stats && stats.total > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">{t('reviews.stats.title')}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+              <div className="rounded-md border p-3 text-center">
+                <div className="text-xs text-muted-foreground">{t('reviews.stats.completionRate')}</div>
+                <div className="text-xl font-semibold text-primary">
+                  {Math.round((stats.completed / stats.total) * 100)}%
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {stats.completed}/{stats.total}
+                </div>
+              </div>
+              <div className="rounded-md border p-3 text-center">
+                <div className="text-xs text-muted-foreground">{t('reviews.reviewStatus_en_cours')}</div>
+                <div className="text-xl font-semibold">{stats.inProgress}</div>
+              </div>
+              <div className="rounded-md border p-3 text-center">
+                <div className="text-xs text-muted-foreground">{t('reviews.stats.averageSelfRating')}</div>
+                <div className="text-xl font-semibold">{stats.averageSelfRating ?? '—'}</div>
+              </div>
+              <div className="rounded-md border p-3 text-center">
+                <div className="text-xs text-muted-foreground">{t('reviews.stats.averageManagerRating')}</div>
+                <div className="text-xl font-semibold">{stats.averageManagerRating ?? '—'}</div>
+              </div>
+            </div>
+            {stats.byDepartment.length > 1 && (
+              <div className="space-y-1">
+                <div className="text-xs font-medium text-muted-foreground">{t('reviews.stats.byDepartment')}</div>
+                {stats.byDepartment.map((d) => (
+                  <div key={d.departmentId} className="flex items-center justify-between text-sm">
+                    <span>{d.name}</span>
+                    <span className="text-muted-foreground">
+                      {d.completed}/{d.total}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

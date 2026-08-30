@@ -7,6 +7,7 @@ import { authenticate } from '../middleware/auth.js';
 import { ForbiddenError, NotFoundError } from '../lib/errors.js';
 import { hasPermission } from '../lib/permissions.js';
 import { computeCongePayeAccrual } from '../lib/leaveAccrual.js';
+import { notifyEmployee } from '../lib/notifications.js';
 
 export const leavesRouter = Router();
 leavesRouter.use(authenticate);
@@ -362,6 +363,17 @@ leavesRouter.post(
       update: { pending: { increment: daysCount } },
     });
 
+    if (employee.managerId) {
+      await notifyEmployee({
+        companyId: user.companyId,
+        employeeId: employee.managerId,
+        type: 'action_requise',
+        title: 'Nouvelle demande de congé',
+        message: `${employee.firstName} ${employee.lastName} a demandé un congé du ${body.startDate} au ${body.endDate}.`,
+        link: '/leaves',
+      });
+    }
+
     res.status(201).json(toLeaveRequestDTO(request));
   })
 );
@@ -392,6 +404,15 @@ leavesRouter.post(
       }),
     ]);
 
+    await notifyEmployee({
+      companyId: user.companyId,
+      employeeId: request.employeeId,
+      type: 'conge_valide',
+      title: 'Demande de congé validée',
+      message: `Votre demande de congé du ${dateOnly(request.startDate)} au ${dateOnly(request.endDate)} a été validée.`,
+      link: '/self',
+    });
+
     res.json(toLeaveRequestDTO(updated));
   })
 );
@@ -421,6 +442,15 @@ leavesRouter.post(
         data: { pending: { decrement: request.daysCount } },
       }),
     ]);
+
+    await notifyEmployee({
+      companyId: user.companyId,
+      employeeId: request.employeeId,
+      type: 'conge_refuse',
+      title: 'Demande de congé refusée',
+      message: `Votre demande de congé du ${dateOnly(request.startDate)} au ${dateOnly(request.endDate)} a été refusée : ${body.comment}`,
+      link: '/self',
+    });
 
     res.json(toLeaveRequestDTO(updated));
   })

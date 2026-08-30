@@ -1,4 +1,4 @@
-import { User, Notification, AuditLog } from '@/types';
+import { User, AuditLog } from '@/types';
 
 export const MOCK_USERS: User[] = [
   {
@@ -63,69 +63,6 @@ export const MOCK_USERS: User[] = [
 ];
 
 export const DEMO_USERS = MOCK_USERS;
-
-export const MOCK_NOTIFICATIONS: Notification[] = [
-  {
-    id: 'notif-001',
-    userId: 'user-hr',
-    type: 'action_requise',
-    title: 'Demandes de congé en attente',
-    message: '3 demandes de congé sont en attente de validation.',
-    read: false,
-    createdAt: '2024-04-22T09:00:00Z',
-    link: '/leaves',
-  },
-  {
-    id: 'notif-002',
-    userId: 'user-accountant',
-    type: 'action_requise',
-    title: 'Ordre de paiement à valider',
-    message: 'Un ordre de paiement de 4 200 000 XOF est en attente de votre validation.',
-    read: false,
-    createdAt: '2024-04-22T10:30:00Z',
-    link: '/payments/validation',
-  },
-  {
-    id: 'notif-003',
-    userId: 'user-employee',
-    type: 'bulletin_disponible',
-    title: 'Bulletin de paie disponible',
-    message: 'Votre bulletin de paie pour Mars 2024 est disponible.',
-    read: false,
-    createdAt: '2024-03-28T08:00:00Z',
-    link: '/self/payslips',
-  },
-  {
-    id: 'notif-004',
-    userId: 'user-employee',
-    type: 'conge_valide',
-    title: 'Demande de congé validée',
-    message: 'Votre demande de congé du 15 au 17 avril a été validée.',
-    read: true,
-    createdAt: '2024-04-11T10:00:00Z',
-    link: '/self/leaves',
-  },
-  {
-    id: 'notif-005',
-    userId: 'user-hr',
-    type: 'essai_termine',
-    title: 'Fin de période d\'essai',
-    message: 'La période d\'essai de Mariam COMPAORE se termine le 31 janvier 2024.',
-    read: false,
-    createdAt: '2024-01-20T08:00:00Z',
-    link: '/employees/emp-008',
-  },
-  {
-    id: 'notif-006',
-    userId: 'user-hr',
-    type: 'contrat_expire',
-    title: 'Contrat à renouveler',
-    message: 'Le CDD de Fatimata TRAORE expire le 31 août 2024.',
-    read: false,
-    createdAt: '2024-04-22T08:00:00Z',
-    link: '/employees/emp-003',
-  },
-];
 
 export const MOCK_AUDIT_LOGS: AuditLog[] = [
   {

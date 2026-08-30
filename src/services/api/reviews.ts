@@ -1,4 +1,4 @@
-import { PerformanceReview, ReviewCycle, ReviewStatus } from '@/types';
+import { CompetencyRating, PerformanceReview, ReviewCycle, ReviewCycleStats, ReviewStatus } from '@/types';
 import { apiClient, buildQueryString } from '@/lib/apiClient';
 
 export async function getReviewCycles(): Promise<ReviewCycle[]> {
@@ -45,18 +45,30 @@ export async function getReview(id: string): Promise<PerformanceReview> {
 
 export async function submitSelfAssessment(
   id: string,
-  data: { objectives?: string; selfAssessment: string; selfRating: number }
+  data: { objectives?: string; selfAssessment: string; competencyRatings: CompetencyRating[] }
 ): Promise<PerformanceReview> {
   return apiClient.post<PerformanceReview>(`/reviews/${id}/self-assessment`, data);
 }
 
 export async function submitManagerAssessment(
   id: string,
-  data: { managerAssessment: string; managerRating: number; nextObjectives?: string }
+  data: { managerAssessment: string; competencyRatings: CompetencyRating[]; nextObjectives?: string }
 ): Promise<PerformanceReview> {
   return apiClient.post<PerformanceReview>(`/reviews/${id}/manager-assessment`, data);
 }
 
 export async function completeReview(id: string): Promise<PerformanceReview> {
   return apiClient.post<PerformanceReview>(`/reviews/${id}/complete`);
+}
+
+export async function getReviewCycleStats(cycleId: string): Promise<ReviewCycleStats> {
+  return apiClient.get<ReviewCycleStats>(`/reviews/cycles/${cycleId}/stats`);
+}
+
+export async function getReviewConfig(): Promise<{ competencies: string[] }> {
+  return apiClient.get<{ competencies: string[] }>('/companies/review-config');
+}
+
+export async function updateReviewConfig(competencies: string[]): Promise<{ competencies: string[] }> {
+  return apiClient.put<{ competencies: string[] }>('/companies/review-config', { competencies });
 }

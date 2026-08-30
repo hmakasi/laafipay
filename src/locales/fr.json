@@ -105,6 +105,7 @@
     "myPayslips": "Mes bulletins",
     "myLeaves": "Mes congés",
     "myReviews": "Mes entretiens",
+    "peerFeedback": "Avis à donner",
     "myProfile": "Mon profil"
   },
   "roles": {
@@ -512,7 +513,49 @@
     "markComplete": "Marquer comme terminé",
     "fillReview": "Remplir l'entretien",
     "noCycles": "Aucun cycle d'entretiens",
-    "noReviews": "Aucun entretien"
+    "noReviews": "Aucun entretien",
+    "competencyRatings": "Notes par compétence",
+    "competenciesSetupCta": "Compétences évaluées",
+    "competenciesSetup": {
+      "title": "Compétences évaluées",
+      "subtitle": "Personnalise les compétences notées lors des entretiens annuels",
+      "listTitle": "Liste des compétences",
+      "listDescription": "Chaque compétence est notée de 1 à 5 par l'employé et par son manager",
+      "addPlaceholder": "Nom de la compétence",
+      "addButton": "Ajouter",
+      "empty": "Aucune compétence configurée",
+      "emptyError": "Ajoute au moins une compétence avant d'enregistrer",
+      "save": "Enregistrer",
+      "saving": "Enregistrement...",
+      "saveSuccess": "Compétences enregistrées",
+      "saveError": "Erreur lors de l'enregistrement"
+    },
+    "stats": {
+      "title": "Statistiques du cycle",
+      "completionRate": "Taux de complétion",
+      "averageSelfRating": "Note moyenne (auto-évaluation)",
+      "averageManagerRating": "Note moyenne (manager)",
+      "byDepartment": "Par département"
+    },
+    "peerFeedback": {
+      "title": "Avis des pairs",
+      "hiddenFromReviewee": "Cette section n'est pas visible par la personne évaluée",
+      "selectPeer": "Choisir un collègue",
+      "request": "Demander un avis",
+      "requested": "Avis demandé",
+      "none": "Aucun avis demandé",
+      "pending": "En attente",
+      "submitted": "Soumis",
+      "rating": "Note",
+      "myRequestsTitle": "Avis demandés par des collègues",
+      "noRequestsForMe": "Aucun avis demandé pour l'instant",
+      "reviewee": "Personne évaluée",
+      "respond": "Répondre",
+      "respondTo": "Répondre pour",
+      "feedback": "Votre avis",
+      "ratingOptional": "Note (optionnel)",
+      "submit": "Envoyer"
+    }
   },
   "reports": {
     "title": "Rapports et exports",

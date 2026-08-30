@@ -23,6 +23,7 @@ import { SelfServicePage } from '@/pages/self/SelfServicePage';
 import { LeavesListPage } from '@/pages/leaves/LeavesListPage';
 import { ReviewCyclesPage } from '@/pages/reviews/ReviewCyclesPage';
 import { ReviewCycleDetailPage } from '@/pages/reviews/ReviewCycleDetailPage';
+import { ReviewCompetenciesSetupPage } from '@/pages/reviews/ReviewCompetenciesSetupPage';
 import { ReportsPage } from '@/pages/ReportsPage';
 import { UsersPage } from '@/pages/users/UsersPage';
 import { AuditPage } from '@/pages/audit/AuditPage';
@@ -175,6 +176,14 @@ export function AppRouter() {
               element={
                 <RequirePermission anyOf={['reviews:read', 'reviews:write', 'reviews:manage_team']}>
                   <ReviewCyclesPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="reviews/settings"
+              element={
+                <RequirePermission permission="reviews:write">
+                  <ReviewCompetenciesSetupPage />
                 </RequirePermission>
               }
             />

@@ -7,16 +7,59 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuthStore } from '@/store/authStore';
 import { hasPermission } from '@/lib/permissions';
 import { REVIEW_STATUS_VARIANT } from '@/lib/constants';
 import {
   useCompleteReviewMutation,
+  useReviewConfigQuery,
   useReviewQuery,
   useSubmitManagerAssessmentMutation,
   useSubmitSelfAssessmentMutation,
 } from '@/hooks/useReviews';
-import { PerformanceReview } from '@/types';
+import { useEmployeesQuery } from '@/hooks/useEmployees';
+import { usePeerFeedbackRequestsQuery, useRequestPeerFeedbackMutation } from '@/hooks/usePeerFeedback';
+import { CompetencyRating, PerformanceReview } from '@/types';
+
+function CompetencyRatingInputs({
+  competencies,
+  ratings,
+  onChange,
+  disabled,
+}: {
+  competencies: string[];
+  ratings: Record<string, string>;
+  onChange: (competency: string, value: string) => void;
+  disabled: boolean;
+}) {
+  return (
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      {competencies.map((competency) => (
+        <div key={competency} className="space-y-1">
+          <Label className="text-xs font-normal text-muted-foreground">{competency}</Label>
+          <Input
+            type="number"
+            min={1}
+            max={5}
+            value={ratings[competency] ?? ''}
+            onChange={(e) => onChange(competency, e.target.value)}
+            disabled={disabled}
+            className="w-20"
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Convertit competencyRatings (déjà soumis) en Record<competency, string> pour
+// hydrater les inputs contrôlés ; competencies (config entreprise, source de
+// vérité pour ce qui doit être noté) fournit les clés manquantes à vide.
+function hydrateRatings(competencies: string[], saved: CompetencyRating[] | undefined): Record<string, string> {
+  const byCompetency = new Map((saved ?? []).map((r) => [r.competency, String(r.rating)]));
+  return Object.fromEntries(competencies.map((c) => [c, byCompetency.get(c) ?? '']));
+}
 
 export function ReviewFormDialog({
   review,
@@ -40,12 +83,18 @@ export function ReviewFormDialog({
   // react-query, seul ce hook le fait.
   const { data: liveReview } = useReviewQuery(review.id);
   const current = liveReview ?? review;
+  const { data: reviewConfig } = useReviewConfigQuery();
+  const competencies = reviewConfig?.competencies ?? [];
 
   const [objectives, setObjectives] = useState(review.objectives ?? '');
   const [selfAssessment, setSelfAssessment] = useState(review.selfAssessment ?? '');
-  const [selfRating, setSelfRating] = useState(String(review.selfRating ?? ''));
+  const [selfRatings, setSelfRatings] = useState<Record<string, string>>(
+    hydrateRatings(competencies, review.selfCompetencyRatings)
+  );
   const [managerAssessment, setManagerAssessment] = useState(review.managerAssessment ?? '');
-  const [managerRating, setManagerRating] = useState(String(review.managerRating ?? ''));
+  const [managerRatings, setManagerRatings] = useState<Record<string, string>>(
+    hydrateRatings(competencies, review.managerCompetencyRatings)
+  );
   const [nextObjectives, setNextObjectives] = useState(review.nextObjectives ?? '');
 
   const cycleOpen = current.cycle.status === 'ouvert';
@@ -66,11 +115,27 @@ export function ReviewFormDialog({
 
   const canComplete = canEditManager && !!current.selfSubmittedAt && !!current.managerSubmittedAt && current.status !== 'termine';
 
+  // Même contrôle d'accès que canAccessReview/canManageAsManager côté
+  // serveur (server/src/routes/reviews.routes.ts + peerFeedback.routes.ts) —
+  // ici seulement pour l'affichage, le serveur reste la seule autorité réelle.
+  const canRequestPeer = cycleOpen && (canEditSelf || canEditManager);
+  const canViewPeer = canEditManager || (!!role && hasPermission(role, 'reviews:write'));
+
+  const ratingsToArray = (ratings: Record<string, string>): CompetencyRating[] =>
+    competencies
+      .map((competency) => ({ competency, rating: Number(ratings[competency]) }))
+      .filter((r) => r.rating >= 1 && r.rating <= 5);
+
+  const selfRatingsComplete = ratingsToArray(selfRatings).length === competencies.length && competencies.length > 0;
+  const managerRatingsComplete = ratingsToArray(managerRatings).length === competencies.length && competencies.length > 0;
+
   const handleSubmitSelf = async () => {
-    const rating = Number(selfRating);
-    if (!selfAssessment || !rating) return;
+    if (!selfAssessment || !selfRatingsComplete) return;
     try {
-      await submitSelf.mutateAsync({ id: review.id, data: { objectives: objectives || undefined, selfAssessment, selfRating: rating } });
+      await submitSelf.mutateAsync({
+        id: review.id,
+        data: { objectives: objectives || undefined, selfAssessment, competencyRatings: ratingsToArray(selfRatings) },
+      });
       toast.success(t('reviews.submitSelfAssessment'));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erreur lors de l'enregistrement");
@@ -78,12 +143,15 @@ export function ReviewFormDialog({
   };
 
   const handleSubmitManager = async () => {
-    const rating = Number(managerRating);
-    if (!managerAssessment || !rating) return;
+    if (!managerAssessment || !managerRatingsComplete) return;
     try {
       await submitManager.mutateAsync({
         id: review.id,
-        data: { managerAssessment, managerRating: rating, nextObjectives: nextObjectives || undefined },
+        data: {
+          managerAssessment,
+          competencyRatings: ratingsToArray(managerRatings),
+          nextObjectives: nextObjectives || undefined,
+        },
       });
       toast.success(t('reviews.submitManagerAssessment'));
     } catch (err) {
@@ -130,19 +198,16 @@ export function ReviewFormDialog({
               />
             </div>
             <div className="space-y-2">
-              <Label>{t('reviews.selfRating')}</Label>
-              <Input
-                type="number"
-                min={1}
-                max={5}
-                value={selfRating}
-                onChange={(e) => setSelfRating(e.target.value)}
+              <Label>{t('reviews.competencyRatings')}</Label>
+              <CompetencyRatingInputs
+                competencies={competencies}
+                ratings={selfRatings}
+                onChange={(c, v) => setSelfRatings((prev) => ({ ...prev, [c]: v }))}
                 disabled={!canEditSelf}
-                className="w-24"
               />
             </div>
             {canEditSelf && (
-              <Button size="sm" onClick={handleSubmitSelf} disabled={!selfAssessment || !selfRating || submitSelf.isPending}>
+              <Button size="sm" onClick={handleSubmitSelf} disabled={!selfAssessment || !selfRatingsComplete || submitSelf.isPending}>
                 {t('reviews.submitSelfAssessment')}
               </Button>
             )}
@@ -160,15 +225,12 @@ export function ReviewFormDialog({
               />
             </div>
             <div className="space-y-2">
-              <Label>{t('reviews.managerRating')}</Label>
-              <Input
-                type="number"
-                min={1}
-                max={5}
-                value={managerRating}
-                onChange={(e) => setManagerRating(e.target.value)}
+              <Label>{t('reviews.competencyRatings')}</Label>
+              <CompetencyRatingInputs
+                competencies={competencies}
+                ratings={managerRatings}
+                onChange={(c, v) => setManagerRatings((prev) => ({ ...prev, [c]: v }))}
                 disabled={!canEditManager}
-                className="w-24"
               />
             </div>
             <div className="space-y-2">
@@ -184,12 +246,16 @@ export function ReviewFormDialog({
               <Button
                 size="sm"
                 onClick={handleSubmitManager}
-                disabled={!managerAssessment || !managerRating || submitManager.isPending}
+                disabled={!managerAssessment || !managerRatingsComplete || submitManager.isPending}
               >
                 {t('reviews.submitManagerAssessment')}
               </Button>
             )}
           </div>
+
+          {(canRequestPeer || canViewPeer) && (
+            <PeerFeedbackSection review={current} canRequest={canRequestPeer} canView={canViewPeer} />
+          )}
         </div>
 
         <DialogFooter>
@@ -201,5 +267,88 @@ export function ReviewFormDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function PeerFeedbackSection({
+  review,
+  canRequest,
+  canView,
+}: {
+  review: PerformanceReview;
+  canRequest: boolean;
+  canView: boolean;
+}) {
+  const { t } = useTranslation();
+  const { data: employeesPage } = useEmployeesQuery({ perPage: 1000 });
+  const { data: requests } = usePeerFeedbackRequestsQuery(canView ? review.id : undefined);
+  const requestMutation = useRequestPeerFeedbackMutation();
+  const [selectedPeerId, setSelectedPeerId] = useState<string>('');
+
+  const candidates = (employeesPage?.data ?? []).filter((e) => e.id !== review.employeeId);
+  const employeeName_ = (id: string) => {
+    const emp = employeesPage?.data.find((e) => e.id === id);
+    return emp ? `${emp.firstName} ${emp.lastName}` : id;
+  };
+
+  const handleRequest = async () => {
+    if (!selectedPeerId) return;
+    try {
+      await requestMutation.mutateAsync({ reviewId: review.id, peerEmployeeId: selectedPeerId });
+      toast.success(t('reviews.peerFeedback.requested'));
+      setSelectedPeerId('');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erreur lors de la demande d'avis");
+    }
+  };
+
+  return (
+    <div className="space-y-4 rounded-md border p-4">
+      <h3 className="text-sm font-semibold">{t('reviews.peerFeedback.title')}</h3>
+      {!canView && (
+        <p className="text-xs text-muted-foreground">{t('reviews.peerFeedback.hiddenFromReviewee')}</p>
+      )}
+
+      {canRequest && (
+        <div className="flex gap-2">
+          <Select value={selectedPeerId} onValueChange={setSelectedPeerId}>
+            <SelectTrigger className="flex-1">
+              <SelectValue placeholder={t('reviews.peerFeedback.selectPeer')} />
+            </SelectTrigger>
+            <SelectContent>
+              {candidates.map((e) => (
+                <SelectItem key={e.id} value={e.id}>
+                  {e.firstName} {e.lastName}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button size="sm" onClick={handleRequest} disabled={!selectedPeerId || requestMutation.isPending}>
+            {t('reviews.peerFeedback.request')}
+          </Button>
+        </div>
+      )}
+
+      {canView && (
+        <div className="space-y-2">
+          {!requests?.length ? (
+            <p className="text-xs text-muted-foreground">{t('reviews.peerFeedback.none')}</p>
+          ) : (
+            requests.map((r) => (
+              <div key={r.id} className="rounded-md border px-3 py-2 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium">{employeeName_(r.peerEmployeeId)}</span>
+                  <Badge variant={r.submittedAt ? 'success' : 'secondary'}>
+                    {r.submittedAt ? t('reviews.peerFeedback.submitted') : t('reviews.peerFeedback.pending')}
+                  </Badge>
+                </div>
+                {r.feedback && <p className="mt-1 text-muted-foreground">{r.feedback}</p>}
+                {r.rating && <p className="mt-1 text-xs text-muted-foreground">{t('reviews.peerFeedback.rating')}: {r.rating}/5</p>}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
   );
 }

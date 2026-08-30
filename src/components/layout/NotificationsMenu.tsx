@@ -22,15 +22,21 @@ export function NotificationsMenu() {
 
   const { data: notifications = [] } = useQuery({
     queryKey: ['notifications', userId],
-    queryFn: () => getNotifications(userId!),
+    queryFn: () => getNotifications(),
     enabled: !!userId,
+    // Pas de push temps réel dans cette stack — un rafraîchissement
+    // périodique reste le seul moyen de voir arriver une notification
+    // créée par une action d'un autre utilisateur (ex. congé approuvé par
+    // le manager pendant que l'employé a l'onglet déjà ouvert).
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
   });
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   const handleMarkAllRead = async () => {
     if (!userId) return;
-    await markAllNotificationsRead(userId);
+    await markAllNotificationsRead();
     queryClient.invalidateQueries({ queryKey: ['notifications', userId] });
   };
 

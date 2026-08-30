@@ -7,6 +7,7 @@ import { prisma } from '../lib/prisma.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { authenticate, authorize } from '../middleware/auth.js';
 import { HttpError, NotFoundError } from '../lib/errors.js';
+import { DEFAULT_COMPETENCIES } from '../lib/reviewCompetencies.js';
 
 export const companiesRouter = Router();
 
@@ -218,5 +219,34 @@ companiesRouter.put(
       },
     });
     res.json({ activeRubrics: config.activeRubrics, customRubrics: config.customRubrics });
+  })
+);
+
+// Compétences évaluées lors des entretiens annuels (ReviewCompetenciesSetupPage.tsx) —
+// même forme que /payroll-config : upsert, liste par défaut tant que rien n'est enregistré.
+const reviewConfigSchema = z.object({ competencies: z.array(z.string().min(1)).min(1) });
+
+companiesRouter.get(
+  '/review-config',
+  authenticate,
+  asyncHandler(async (req, res) => {
+    const config = await prisma.reviewConfig.findUnique({ where: { companyId: req.user!.companyId } });
+    res.json({ competencies: config ? (config.competencies as string[]) : DEFAULT_COMPETENCIES });
+  })
+);
+
+companiesRouter.put(
+  '/review-config',
+  authenticate,
+  authorize('reviews:write'),
+  asyncHandler(async (req, res) => {
+    const data = reviewConfigSchema.parse(req.body);
+    const companyId = req.user!.companyId;
+    const config = await prisma.reviewConfig.upsert({
+      where: { companyId },
+      create: { companyId, competencies: data.competencies },
+      update: { competencies: data.competencies },
+    });
+    res.json({ competencies: config.competencies as string[] });
   })
 );

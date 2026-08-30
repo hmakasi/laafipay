@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Plus } from 'lucide-react';
+import { Plus, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -62,6 +62,13 @@ export function ReviewCyclesPage() {
           <h1 className="text-2xl font-semibold">{t('reviews.title')}</h1>
           <p className="text-sm text-muted-foreground">{t('reviews.cycles')}</p>
         </div>
+        <div className="flex gap-2">
+        <PermissionGate permission="reviews:write">
+          <Button variant="outline" onClick={() => navigate('/reviews/settings')}>
+            <Settings className="mr-2 h-4 w-4" />
+            {t('reviews.competenciesSetupCta')}
+          </Button>
+        </PermissionGate>
         <PermissionGate permission="reviews:write">
           <Dialog open={open} onOpenChange={(next) => { setOpen(next); if (!next) resetForm(); }}>
             <DialogTrigger asChild>
@@ -112,6 +119,7 @@ export function ReviewCyclesPage() {
             </DialogContent>
           </Dialog>
         </PermissionGate>
+        </div>
       </div>
 
       <Card>

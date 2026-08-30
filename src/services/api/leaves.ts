@@ -1,14 +1,14 @@
 import { LeaveChannel, LeaveRequest, LeaveBalance, LeaveDashboard, LeaveStatus } from '@/types';
-import { getEmployee } from '@/services/api/employees';
 import { apiClient, buildQueryString } from '@/lib/apiClient';
-import { notifyEmployee } from '@/services/api/users';
 
 // ── API Functions ─────────────────────────────────────────────
 // Persistées côté serveur (server/src/routes/leaves.routes.ts) — avant, ce
 // module gardait tout en mémoire dans le processus JS du navigateur
 // (aucune table Postgres), donc une demande soumise par un salarié
 // n'apparaissait jamais chez qui que ce soit d'autre (autre onglet, autre
-// session RH).
+// session RH). Les notifications (manager prévenu d'une nouvelle demande,
+// employé prévenu de la décision) sont désormais créées côté serveur, dans
+// le même handler que la mutation — voir leaves.routes.ts.
 
 export async function getLeaveRequests(params?: {
   employeeId?: string;
@@ -30,51 +30,17 @@ export async function getLeaveRequest(id: string): Promise<LeaveRequest> {
 export async function createLeaveRequest(
   data: Omit<LeaveRequest, 'id' | 'status' | 'submittedAt' | 'channel'> & { channel?: LeaveChannel }
 ): Promise<LeaveRequest> {
-  const created = await apiClient.post<LeaveRequest>('/leaves', data);
-
-  // getEmployee (fiche unique) plutôt que getAllEmployees (liste complète) :
-  // le demandeur est en général un salarié self-service qui n'a le droit de
-  // lire que sa propre fiche (self:profile), pas l'effectif entier
-  // (employees:read, réservé RH/managers).
-  const emp = await getEmployee(created.employeeId);
-  if (emp?.managerId) {
-    notifyEmployee(emp.managerId, {
-      type: 'action_requise',
-      title: 'Nouvelle demande de congé',
-      message: `${emp.firstName} ${emp.lastName} a demandé un congé du ${created.startDate} au ${created.endDate}.`,
-      link: '/leaves',
-    });
-  }
-
-  return created;
+  return apiClient.post<LeaveRequest>('/leaves', data);
 }
 
 export async function approveLeaveRequest(id: string, _reviewedBy: string, comment?: string): Promise<LeaveRequest> {
   // reviewedBy est ignoré : le serveur l'établit lui-même depuis le token
   // (req.user.email), pour ne jamais faire confiance à une valeur cliente.
-  const req = await apiClient.post<LeaveRequest>(`/leaves/${id}/approve`, { comment });
-
-  notifyEmployee(req.employeeId, {
-    type: 'conge_valide',
-    title: 'Demande de congé validée',
-    message: `Votre demande de congé du ${req.startDate} au ${req.endDate} a été validée.`,
-    link: '/self',
-  });
-
-  return req;
+  return apiClient.post<LeaveRequest>(`/leaves/${id}/approve`, { comment });
 }
 
 export async function refuseLeaveRequest(id: string, _reviewedBy: string, comment: string): Promise<LeaveRequest> {
-  const req = await apiClient.post<LeaveRequest>(`/leaves/${id}/refuse`, { comment });
-
-  notifyEmployee(req.employeeId, {
-    type: 'conge_refuse',
-    title: 'Demande de congé refusée',
-    message: `Votre demande de congé du ${req.startDate} au ${req.endDate} a été refusée : ${comment}`,
-    link: '/self',
-  });
-
-  return req;
+  return apiClient.post<LeaveRequest>(`/leaves/${id}/refuse`, { comment });
 }
 
 export async function cancelLeaveRequest(id: string): Promise<LeaveRequest> {

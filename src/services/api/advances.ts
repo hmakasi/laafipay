@@ -2,8 +2,14 @@ import { SalaryAdvanceRequest } from '@/types';
 import { MOCK_ADVANCE_REQUESTS } from '@/mocks/advances';
 import { getAllEmployees } from '@/services/api/employees';
 import { delay, deepClone, generateRef } from '@/lib/utils';
-import { notifyEmployee } from '@/services/api/users';
 
+// Module encore entièrement mocké (aucune route serveur, aucune table
+// Postgres) — contrairement aux congés, les avances n'ont pas encore été
+// migrées vers le backend réel, donc pas de notification possible ici tant
+// que ça reste le cas (les notifications ne sont plus créées que
+// côté serveur, voir server/src/lib/notifications.ts). Pas de régression :
+// la notification émise ici était déjà fictive, jamais vue par personne
+// d'autre que l'onglet qui l'a déclenchée.
 let advances = deepClone(MOCK_ADVANCE_REQUESTS);
 
 export async function getAdvanceRequests(): Promise<SalaryAdvanceRequest[]> {
@@ -19,13 +25,6 @@ export async function approveAdvanceRequest(id: string, approvedBy: string): Pro
   advance.approvedAt = new Date().toISOString();
   advance.approvedBy = approvedBy;
 
-  notifyEmployee(advance.employeeId, {
-    type: 'paiement_effectue',
-    title: 'Avance approuvée',
-    message: `Votre demande d'avance a été approuvée, le versement Mobile Money va être déclenché.`,
-    link: '/self',
-  });
-
   return deepClone(advance);
 }
 
@@ -40,13 +39,6 @@ export async function payAdvanceRequestViaMobileMoney(id: string): Promise<Salar
   advance.mobileMoneyOperator = employee?.mobileMoneyInfo?.operator ?? advance.mobileMoneyOperator ?? 'orange';
   advance.reference = generateRef('OM');
   advance.paidAt = new Date().toISOString();
-
-  notifyEmployee(advance.employeeId, {
-    type: 'paiement_effectue',
-    title: 'Avance versée',
-    message: `Votre avance de ${advance.amount.toLocaleString('fr-FR')} FCFA a été versée par Mobile Money (réf. ${advance.reference}).`,
-    link: '/self',
-  });
 
   return deepClone(advance);
 }
