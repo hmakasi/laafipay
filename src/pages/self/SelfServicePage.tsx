@@ -3,6 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MyPayslipsTab } from '@/pages/self/MyPayslipsTab';
 import { MyLeavesTab } from '@/pages/self/MyLeavesTab';
 import { MyReviewsTab } from '@/pages/self/MyReviewsTab';
+import { WhatsAppPinTab } from '@/pages/self/WhatsAppPinTab';
 
 export function SelfServicePage() {
   const { t } = useTranslation();
@@ -16,6 +17,7 @@ export function SelfServicePage() {
           <TabsTrigger value="payslips">{t('nav.myPayslips')}</TabsTrigger>
           <TabsTrigger value="leaves">{t('nav.myLeaves')}</TabsTrigger>
           <TabsTrigger value="reviews">{t('nav.myReviews')}</TabsTrigger>
+          <TabsTrigger value="whatsappPin">{t('self.whatsappPin.title')}</TabsTrigger>
         </TabsList>
         <TabsContent value="payslips">
           <MyPayslipsTab />
@@ -25,6 +27,9 @@ export function SelfServicePage() {
         </TabsContent>
         <TabsContent value="reviews">
           <MyReviewsTab />
+        </TabsContent>
+        <TabsContent value="whatsappPin">
+          <WhatsAppPinTab />
         </TabsContent>
       </Tabs>
     </div>
