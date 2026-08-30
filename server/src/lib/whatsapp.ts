@@ -27,48 +27,27 @@ export interface WhatsAppSendResult {
   error?: string;
 }
 
-async function sendWhatsAppTemplate(
-  toPhone: string,
-  countryCode: string,
-  templateName: string,
-  languageCode: string,
-  bodyParams: string[]
-): Promise<WhatsAppSendResult> {
+async function postToWhatsAppMessagesApi(payload: Record<string, unknown>): Promise<WhatsAppSendResult> {
   const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
   const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
-
   if (!phoneNumberId || !accessToken) {
     return { ok: false, error: 'WHATSAPP_PHONE_NUMBER_ID / WHATSAPP_ACCESS_TOKEN non configurés' };
   }
 
-  const to = normalizeWhatsAppNumber(toPhone, countryCode);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-
   try {
     const res = await fetch(`https://graph.facebook.com/${GRAPH_API_VERSION}/${phoneNumberId}/messages`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
       signal: controller.signal,
-      body: JSON.stringify({
-        messaging_product: 'whatsapp',
-        to,
-        type: 'template',
-        template: {
-          name: templateName,
-          language: { code: languageCode },
-          components: [{ type: 'body', parameters: bodyParams.map((text) => ({ type: 'text', text })) }],
-        },
-      }),
+      body: JSON.stringify({ messaging_product: 'whatsapp', ...payload }),
     });
-
     const body = await res.json().catch(() => ({}) as Record<string, unknown>);
-
     if (!res.ok) {
       const metaError = (body as { error?: { message?: string } }).error;
       return { ok: false, error: metaError?.message ?? `Meta a répondu ${res.status}` };
     }
-
     const messages = (body as { messages?: { id: string }[] }).messages;
     return { ok: true, messageId: messages?.[0]?.id };
   } catch (err) {
@@ -76,6 +55,72 @@ async function sendWhatsAppTemplate(
   } finally {
     clearTimeout(timeout);
   }
+}
+
+async function sendWhatsAppTemplate(
+  toPhone: string,
+  countryCode: string,
+  templateName: string,
+  languageCode: string,
+  bodyParams: string[]
+): Promise<WhatsAppSendResult> {
+  const to = normalizeWhatsAppNumber(toPhone, countryCode);
+  return postToWhatsAppMessagesApi({
+    to,
+    type: 'template',
+    template: { name: templateName, language: { code: languageCode }, components: [{ type: 'body', parameters: bodyParams.map((text) => ({ type: 'text', text })) }] },
+  });
+}
+
+export async function sendWhatsAppTextMessage(to: string, body: string): Promise<WhatsAppSendResult> {
+  return postToWhatsAppMessagesApi({ to, type: 'text', text: { body } });
+}
+
+export interface WhatsAppListRow {
+  id: string;
+  title: string;
+  description?: string;
+}
+
+export async function sendWhatsAppListMessage(
+  to: string,
+  params: { bodyText: string; buttonLabel: string; sections: { title: string; rows: WhatsAppListRow[] }[] }
+): Promise<WhatsAppSendResult> {
+  return postToWhatsAppMessagesApi({
+    to,
+    type: 'interactive',
+    interactive: {
+      type: 'list',
+      body: { text: params.bodyText },
+      action: { button: params.buttonLabel, sections: params.sections },
+    },
+  });
+}
+
+export async function sendWhatsAppReplyButtons(
+  to: string,
+  params: { bodyText: string; buttons: { id: string; title: string }[] }
+): Promise<WhatsAppSendResult> {
+  if (params.buttons.length > 3) {
+    throw new Error('WhatsApp autorise au maximum 3 boutons de réponse rapide');
+  }
+  return postToWhatsAppMessagesApi({
+    to,
+    type: 'interactive',
+    interactive: {
+      type: 'button',
+      body: { text: params.bodyText },
+      action: { buttons: params.buttons.map((b) => ({ type: 'reply', reply: { id: b.id, title: b.title } })) },
+    },
+  });
+}
+
+export async function sendWhatsAppDocument(to: string, params: { link: string; filename: string; caption?: string }): Promise<WhatsAppSendResult> {
+  return postToWhatsAppMessagesApi({
+    to,
+    type: 'document',
+    document: { link: params.link, filename: params.filename, ...(params.caption ? { caption: params.caption } : {}) },
+  });
 }
 
 // Envoie une notification "bulletin disponible" via un message template
