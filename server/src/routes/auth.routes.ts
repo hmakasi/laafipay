@@ -4,8 +4,9 @@ import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { toUserDTO } from '../lib/dto.js';
-import { authenticate, signToken } from '../middleware/auth.js';
-import { UnauthorizedError } from '../lib/errors.js';
+import { authenticate, signToken, authorize } from '../middleware/auth.js';
+import { UnauthorizedError, HttpError } from '../lib/errors.js';
+import { hashPin } from '../lib/whatsappPin.js';
 
 export const authRouter = Router();
 
@@ -88,5 +89,30 @@ authRouter.patch(
     });
 
     res.json(toUserDTO(updated));
+  })
+);
+
+const setWhatsAppPinSchema = z.object({
+  pin: z.string().regex(/^\d{4}$/, 'Le code PIN doit contenir exactement 4 chiffres'),
+});
+
+authRouter.patch(
+  '/whatsapp-pin',
+  authenticate,
+  authorize('self:profile'),
+  asyncHandler(async (req, res) => {
+    const { pin } = setWhatsAppPinSchema.parse(req.body);
+    const employeeId = req.user!.employeeId;
+    if (!employeeId) {
+      throw new HttpError(400, 'Cette fonctionnalité est réservée aux comptes liés à une fiche employé');
+    }
+
+    const whatsappPinHash = await hashPin(pin);
+    await prisma.employee.update({
+      where: { id: employeeId },
+      data: { whatsappPinHash, whatsappPinFailedAttempts: 0, whatsappPinLockedUntil: null },
+    });
+
+    res.json({ whatsappPinSet: true });
   })
 );
