@@ -7,6 +7,8 @@ import { authenticate } from '../middleware/auth.js';
 import { ForbiddenError, NotFoundError } from '../lib/errors.js';
 import { hasPermission } from '../lib/permissions.js';
 import { computeCongePayeAccrual } from '../lib/leaveAccrual.js';
+import { createLeaveRequestRecord } from '../lib/leaveRequests.js';
+import { sendLeaveDecisionNotification } from '../lib/whatsapp.js';
 
 export const leavesRouter = Router();
 leavesRouter.use(authenticate);
@@ -337,29 +339,15 @@ leavesRouter.post(
     const endDate = new Date(body.endDate);
     const daysCount = Math.floor((endDate.getTime() - startDate.getTime()) / 86_400_000) + 1;
 
-    const request = await prisma.leaveRequest.create({
-      data: {
-        companyId: user.companyId,
-        employeeId,
-        type: body.type,
-        startDate,
-        endDate,
-        daysCount,
-        reason: body.reason,
-        channel: body.channel ?? 'portail',
-      },
-    });
-
-    await prisma.leaveBalance.upsert({
-      where: { employeeId_year_type: { employeeId, year: startDate.getUTCFullYear(), type: body.type } },
-      create: {
-        companyId: user.companyId,
-        employeeId,
-        year: startDate.getUTCFullYear(),
-        type: body.type,
-        pending: daysCount,
-      },
-      update: { pending: { increment: daysCount } },
+    const request = await createLeaveRequestRecord({
+      companyId: user.companyId,
+      employeeId,
+      type: body.type,
+      startDate,
+      endDate,
+      daysCount,
+      reason: body.reason,
+      channel: body.channel ?? 'portail',
     });
 
     res.status(201).json(toLeaveRequestDTO(request));
@@ -392,6 +380,14 @@ leavesRouter.post(
       }),
     ]);
 
+    const decisionEmployee = await prisma.employee.findUnique({ where: { id: request.employeeId }, include: { company: { select: { countryCode: true } } } });
+    if (decisionEmployee) {
+      await sendLeaveDecisionNotification(decisionEmployee.phone, decisionEmployee.company.countryCode, 'valide', {
+        startDate: dateOnly(request.startDate),
+        endDate: dateOnly(request.endDate),
+      });
+    }
+
     res.json(toLeaveRequestDTO(updated));
   })
 );
@@ -421,6 +417,14 @@ leavesRouter.post(
         data: { pending: { decrement: request.daysCount } },
       }),
     ]);
+
+    const decisionEmployee = await prisma.employee.findUnique({ where: { id: request.employeeId }, include: { company: { select: { countryCode: true } } } });
+    if (decisionEmployee) {
+      await sendLeaveDecisionNotification(decisionEmployee.phone, decisionEmployee.company.countryCode, 'refuse', {
+        startDate: dateOnly(request.startDate),
+        endDate: dateOnly(request.endDate),
+      });
+    }
 
     res.json(toLeaveRequestDTO(updated));
   })

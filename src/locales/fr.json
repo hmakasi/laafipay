@@ -603,6 +603,18 @@
     "successTitle": "Merci ! Votre dossier est complet.",
     "successDescription": "Votre service RH a été informé. Vous pouvez fermer cette page."
   },
+  "self": {
+    "whatsappPin": {
+      "title": "Code PIN WhatsApp",
+      "description": "Ce code à 4 chiffres vous sera demandé pour recevoir votre bulletin de paie sur WhatsApp.",
+      "pinLabel": "Nouveau code PIN (4 chiffres)",
+      "confirmLabel": "Confirmer le code PIN",
+      "mismatch": "Les deux codes ne correspondent pas",
+      "invalid": "Le code doit contenir exactement 4 chiffres",
+      "submit": "Enregistrer",
+      "success": "Code PIN WhatsApp enregistré"
+    }
+  },
   "landing": {
     "nav": {
       "features": "Fonctionnalités",

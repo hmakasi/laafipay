@@ -16,12 +16,13 @@ import { comptaRouter } from './routes/compta.routes.js';
 import { paymentsRouter } from './routes/payments.routes.js';
 import { treasuryRouter } from './routes/treasury.routes.js';
 import { adminRouter } from './routes/admin.routes.js';
+import { whatsappWebhookRouter } from './routes/whatsappWebhook.routes.js';
 import { HttpError } from './lib/errors.js';
 
 const app = express();
 
 app.use(cors({ origin: process.env.CORS_ORIGIN ?? 'http://localhost:3000' }));
-app.use(express.json());
+app.use(express.json({ verify: (req, _res, buf) => { (req as Request & { rawBody?: Buffer }).rawBody = buf; } }));
 app.use('/uploads', express.static('uploads'));
 
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
@@ -39,6 +40,7 @@ app.use('/api/reviews', reviewsRouter);
 app.use('/api/payments', paymentsRouter);
 app.use('/api/treasury', treasuryRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/whatsapp', whatsappWebhookRouter);
 
 // Passerelle LaafiPay -> LaafiCompta
 app.use('/api/compta', comptaRouter);

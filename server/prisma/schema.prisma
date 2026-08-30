@@ -144,6 +144,8 @@ enum LeaveType {
   maternite
   paternite
   recuperation
+  conge_anciennete
+  examen_formation
 }
 
 enum LeaveStatus {
@@ -371,6 +373,10 @@ model Employee {
   iutsCategory Int     @default(1)
   avatar       String?
 
+  whatsappPinHash           String?
+  whatsappPinFailedAttempts Int       @default(0)
+  whatsappPinLockedUntil    DateTime?
+
   // "invite" (not "onboarding") to avoid colliding with the onboarding checklist below (contractSigned, cnssRegistered, ...)
   inviteToken  String?              @unique
   inviteStatus EmployeeInviteStatus @default(not_invited)
@@ -394,6 +400,7 @@ model Employee {
   leaveBalances       LeaveBalance[]
   performanceReviews  PerformanceReview[]
   paymentTransactions PaymentTransaction[]
+  whatsappSessions    WhatsAppSession[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -561,6 +568,7 @@ model Payslip {
   // l'instant, seul WhatsApp a un vrai envoi donc seul WhatsApp a besoin
   // de tracer pourquoi ça a échoué.
   whatsappError  String?
+  pdfUrl         String?
   baseSalary     Float
   overtimeAmount Float             @default(0)
   salaireBrut    Float
@@ -763,6 +771,19 @@ model LeaveBalance {
   pending    Float     @default(0)
 
   @@unique([employeeId, year, type])
+}
+
+model WhatsAppSession {
+  id         String   @id @default(cuid())
+  phone      String   @unique
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  flow       String
+  step       String
+  data       Json     @default("{}")
+  expiresAt  DateTime
+
+  @@index([employeeId])
 }
 
 model ReviewCycle {

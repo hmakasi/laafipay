@@ -27,6 +27,102 @@ export interface WhatsAppSendResult {
   error?: string;
 }
 
+async function postToWhatsAppMessagesApi(payload: Record<string, unknown>): Promise<WhatsAppSendResult> {
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+  if (!phoneNumberId || !accessToken) {
+    return { ok: false, error: 'WHATSAPP_PHONE_NUMBER_ID / WHATSAPP_ACCESS_TOKEN non configurés' };
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    const res = await fetch(`https://graph.facebook.com/${GRAPH_API_VERSION}/${phoneNumberId}/messages`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      signal: controller.signal,
+      body: JSON.stringify({ messaging_product: 'whatsapp', ...payload }),
+    });
+    const body = await res.json().catch(() => ({}) as Record<string, unknown>);
+    if (!res.ok) {
+      const metaError = (body as { error?: { message?: string } }).error;
+      return { ok: false, error: metaError?.message ?? `Meta a répondu ${res.status}` };
+    }
+    const messages = (body as { messages?: { id: string }[] }).messages;
+    return { ok: true, messageId: messages?.[0]?.id };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function sendWhatsAppTemplate(
+  toPhone: string,
+  countryCode: string,
+  templateName: string,
+  languageCode: string,
+  bodyParams: string[]
+): Promise<WhatsAppSendResult> {
+  const to = normalizeWhatsAppNumber(toPhone, countryCode);
+  return postToWhatsAppMessagesApi({
+    to,
+    type: 'template',
+    template: { name: templateName, language: { code: languageCode }, components: [{ type: 'body', parameters: bodyParams.map((text) => ({ type: 'text', text })) }] },
+  });
+}
+
+export async function sendWhatsAppTextMessage(to: string, body: string): Promise<WhatsAppSendResult> {
+  return postToWhatsAppMessagesApi({ to, type: 'text', text: { body } });
+}
+
+export interface WhatsAppListRow {
+  id: string;
+  title: string;
+  description?: string;
+}
+
+export async function sendWhatsAppListMessage(
+  to: string,
+  params: { bodyText: string; buttonLabel: string; sections: { title: string; rows: WhatsAppListRow[] }[] }
+): Promise<WhatsAppSendResult> {
+  return postToWhatsAppMessagesApi({
+    to,
+    type: 'interactive',
+    interactive: {
+      type: 'list',
+      body: { text: params.bodyText },
+      action: { button: params.buttonLabel, sections: params.sections },
+    },
+  });
+}
+
+export async function sendWhatsAppReplyButtons(
+  to: string,
+  params: { bodyText: string; buttons: { id: string; title: string }[] }
+): Promise<WhatsAppSendResult> {
+  if (params.buttons.length > 3) {
+    throw new Error('WhatsApp autorise au maximum 3 boutons de réponse rapide');
+  }
+  return postToWhatsAppMessagesApi({
+    to,
+    type: 'interactive',
+    interactive: {
+      type: 'button',
+      body: { text: params.bodyText },
+      action: { buttons: params.buttons.map((b) => ({ type: 'reply', reply: { id: b.id, title: b.title } })) },
+    },
+  });
+}
+
+export async function sendWhatsAppDocument(to: string, params: { link: string; filename: string; caption?: string }): Promise<WhatsAppSendResult> {
+  return postToWhatsAppMessagesApi({
+    to,
+    type: 'document',
+    document: { link: params.link, filename: params.filename, ...(params.caption ? { caption: params.caption } : {}) },
+  });
+}
+
 // Envoie une notification "bulletin disponible" via un message template
 // Meta Cloud API — obligatoire ici : on contacte l'employé en dehors de
 // toute fenêtre de conversation ouverte (il ne vient pas de nous écrire),
@@ -40,57 +136,40 @@ export async function sendPayslipWhatsAppNotification(
   countryCode: string,
   params: { employeeName: string; period: string; montantNet: string }
 ): Promise<WhatsAppSendResult> {
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-  const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
   const templateName = process.env.WHATSAPP_TEMPLATE_NAME ?? 'bulletin_disponible';
   const languageCode = process.env.WHATSAPP_TEMPLATE_LANG ?? 'fr';
+  return sendWhatsAppTemplate(toPhone, countryCode, templateName, languageCode, [params.employeeName, params.period, params.montantNet]);
+}
 
-  if (!phoneNumberId || !accessToken) {
-    return { ok: false, error: 'WHATSAPP_PHONE_NUMBER_ID / WHATSAPP_ACCESS_TOKEN non configurés' };
-  }
+// Notifie le manager d'une nouvelle demande de congé (portail ou WhatsApp).
+// Le template doit être créé et approuvé dans Meta Business Manager au
+// préalable (voir docs/superpowers/specs/2026-08-30-whatsapp-bot-design.md) —
+// tant qu'il ne l'est pas, renvoie un échec propre plutôt que de planter.
+export async function sendLeaveManagerNotification(
+  managerPhone: string,
+  countryCode: string,
+  params: { employeeName: string; startDate: string; endDate: string }
+): Promise<WhatsAppSendResult> {
+  const templateName = process.env.WHATSAPP_LEAVE_MANAGER_TEMPLATE_NAME ?? 'demande_conge_manager';
+  const languageCode = process.env.WHATSAPP_TEMPLATE_LANG ?? 'fr';
+  return sendWhatsAppTemplate(managerPhone, countryCode, templateName, languageCode, [params.employeeName, params.startDate, params.endDate]);
+}
 
-  const to = normalizeWhatsAppNumber(toPhone, countryCode);
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-
-  try {
-    const res = await fetch(`https://graph.facebook.com/${GRAPH_API_VERSION}/${phoneNumberId}/messages`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-      signal: controller.signal,
-      body: JSON.stringify({
-        messaging_product: 'whatsapp',
-        to,
-        type: 'template',
-        template: {
-          name: templateName,
-          language: { code: languageCode },
-          components: [
-            {
-              type: 'body',
-              parameters: [
-                { type: 'text', text: params.employeeName },
-                { type: 'text', text: params.period },
-                { type: 'text', text: params.montantNet },
-              ],
-            },
-          ],
-        },
-      }),
-    });
-
-    const body = await res.json().catch(() => ({}) as Record<string, unknown>);
-
-    if (!res.ok) {
-      const metaError = (body as { error?: { message?: string } }).error;
-      return { ok: false, error: metaError?.message ?? `Meta a répondu ${res.status}` };
-    }
-
-    const messages = (body as { messages?: { id: string }[] }).messages;
-    return { ok: true, messageId: messages?.[0]?.id };
-  } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : String(err) };
-  } finally {
-    clearTimeout(timeout);
-  }
+// Notifie l'employé de la décision (validée/refusée) prise sur sa demande de
+// congé, qu'elle vienne du portail ou d'un futur flux WhatsApp. Le template
+// doit être créé et approuvé dans Meta Business Manager au préalable (voir
+// docs/superpowers/specs/2026-08-30-whatsapp-bot-design.md) — tant qu'il ne
+// l'est pas, renvoie un échec propre plutôt que de planter.
+export async function sendLeaveDecisionNotification(
+  employeePhone: string,
+  countryCode: string,
+  decision: 'valide' | 'refuse',
+  params: { startDate: string; endDate: string }
+): Promise<WhatsAppSendResult> {
+  const templateName =
+    decision === 'valide'
+      ? (process.env.WHATSAPP_LEAVE_APPROVED_TEMPLATE_NAME ?? 'conge_valide')
+      : (process.env.WHATSAPP_LEAVE_REFUSED_TEMPLATE_NAME ?? 'conge_refuse');
+  const languageCode = process.env.WHATSAPP_TEMPLATE_LANG ?? 'fr';
+  return sendWhatsAppTemplate(employeePhone, countryCode, templateName, languageCode, [params.startDate, params.endDate]);
 }

@@ -28,3 +28,6 @@ server/dist
 *.sw?
 
 .vercel
+
+.worktrees
+.superpowers

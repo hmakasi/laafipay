@@ -21,3 +21,7 @@ export async function logout(): Promise<void> {
 export async function changePassword(currentPassword: string, newPassword: string): Promise<User> {
   return apiClient.patch<User>('/auth/change-password', { currentPassword, newPassword });
 }
+
+export async function setWhatsAppPin(pin: string): Promise<{ whatsappPinSet: boolean }> {
+  return apiClient.patch<{ whatsappPinSet: boolean }>('/auth/whatsapp-pin', { pin });
+}
