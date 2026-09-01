@@ -195,6 +195,20 @@ enum PaymentOrderType {
   especes
 }
 
+enum AdvanceChannel {
+  whatsapp
+  portail
+}
+
+enum AdvanceStatus {
+  en_attente
+  rejete
+  approuve
+  verse_mobile_money
+  en_remboursement
+  rembourse
+}
+
 enum TreasuryAccountKind {
   banque
   mobile_money
@@ -262,6 +276,7 @@ model Company {
   comptaOutboxEvents   ComptaOutboxEvent[]
   comptaJournalEntries ComptaJournalEntry[]
   paymentOrders        PaymentOrder[]
+  salaryAdvances       SalaryAdvance[]
   treasuryAccounts     TreasuryAccount[]
   treasuryTransactions TreasuryTransaction[]
   notifications        Notification[]
@@ -279,6 +294,7 @@ model PayrollConfig {
   company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
   activeRubrics Json
   customRubrics Json
+  maxAdvancePercent Float    @default(30)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
@@ -449,6 +465,7 @@ model Employee {
   leaveBalances       LeaveBalance[]
   performanceReviews  PerformanceReview[]
   paymentTransactions PaymentTransaction[]
+  salaryAdvances      SalaryAdvance[]
   peerFeedbackRequests PeerFeedbackRequest[]
 
   createdAt DateTime @default(now())
@@ -733,6 +750,52 @@ model PaymentTransaction {
   processedAt  DateTime?
   errorMessage String?
   retryCount   Int                  @default(0)
+}
+
+// ── Avances sur salaire ──────────────────────────────────────────
+// remainingBalance décroît à chaque cycle de paie validé (voir
+// applyAdvanceDeductionsForCycle, server/src/lib/salaryAdvances.ts) : si le
+// solde n'est pas épuisé en un cycle, l'avance reste "en_remboursement" et
+// réapparaît pré-remplie au cycle suivant (voir syncEntries,
+// payroll.routes.ts) jusqu'à remboursement complet.
+model SalaryAdvance {
+  id                  String              @id @default(cuid())
+  companyId           String
+  company             Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeId          String
+  employee            Employee            @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  amount              Float
+  remainingBalance    Float
+  channel             AdvanceChannel
+  status              AdvanceStatus       @default(en_attente)
+  requestedAt         DateTime            @default(now())
+  approvedAt          DateTime?
+  approvedBy          String?
+  rejectedAt          DateTime?
+  rejectedBy          String?
+  rejectionReason     String?
+  mobileMoneyOperator MobileMoneyOperator?
+  reference           String?
+  paidAt              DateTime?
+  createdAt           DateTime            @default(now())
+  deductions          AdvanceDeduction[]
+
+  @@index([employeeId])
+  @@index([companyId, status])
+}
+
+model AdvanceDeduction {
+  id             String        @id @default(cuid())
+  advanceId      String
+  advance        SalaryAdvance @relation(fields: [advanceId], references: [id], onDelete: Cascade)
+  // Référence libre vers PayrollEntry.id — même convention que
+  // TreasuryTransaction.matchedPaymentTransactionId (pas de relation Prisma
+  // formelle, l'entrée de paie n'a pas besoin de connaître ses déductions).
+  payrollEntryId String
+  amount         Float
+  createdAt      DateTime      @default(now())
+
+  @@index([advanceId])
 }
 
 // ── Trésorerie & Rapprochement (LaafiCompta) ────────────────────
