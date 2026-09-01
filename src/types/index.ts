@@ -403,21 +403,25 @@ export interface PaymentTransaction {
 // Salary Advances
 // ============================================================
 
-export type AdvanceStatus = 'demande_whatsapp' | 'approuve' | 'verse_mobile_money' | 'deduit';
+export type AdvanceChannel = 'whatsapp' | 'portail';
+export type AdvanceStatus = 'en_attente' | 'rejete' | 'approuve' | 'verse_mobile_money' | 'en_remboursement' | 'rembourse';
 
-export interface SalaryAdvanceRequest {
+export interface SalaryAdvance {
   id: string;
   employeeId: string;
   amount: number;
+  remainingBalance: number;
   requestedAt: string;
-  channel: 'whatsapp' | 'portail';
+  channel: AdvanceChannel;
   status: AdvanceStatus;
   approvedAt?: string;
   approvedBy?: string;
+  rejectedAt?: string;
+  rejectedBy?: string;
+  rejectionReason?: string;
   mobileMoneyOperator?: MobileMoneyOperator;
   reference?: string;
   paidAt?: string;
-  deductedAt?: string;
 }
 
 // ============================================================
