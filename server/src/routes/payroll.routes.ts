@@ -145,7 +145,7 @@ async function syncEntries(cycle: Pick<PayrollCycle, 'id' | 'companyId' | 'legal
   });
 }
 
-async function mostRecentLegalSettings(companyId: string) {
+export async function mostRecentLegalSettings(companyId: string) {
   const legalSettings = await prisma.legalSettings.findFirst({ where: { companyId }, orderBy: { effectiveDate: 'desc' } });
   if (!legalSettings) {
     throw new HttpError(400, 'Aucun barème CNSS/IUTS configuré pour cette entreprise');

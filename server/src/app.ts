@@ -17,6 +17,7 @@ import { peerFeedbackRouter } from './routes/peerFeedback.routes.js';
 import { comptaRouter } from './routes/compta.routes.js';
 import { paymentsRouter } from './routes/payments.routes.js';
 import { treasuryRouter } from './routes/treasury.routes.js';
+import { advancesRouter } from './routes/advances.routes.js';
 import { adminRouter } from './routes/admin.routes.js';
 import { HttpError } from './lib/errors.js';
 
@@ -42,6 +43,7 @@ app.use('/api/reviews', peerFeedbackRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/payments', paymentsRouter);
 app.use('/api/treasury', treasuryRouter);
+app.use('/api/advances', advancesRouter);
 app.use('/api/admin', adminRouter);
 
 // Passerelle LaafiPay -> LaafiCompta
