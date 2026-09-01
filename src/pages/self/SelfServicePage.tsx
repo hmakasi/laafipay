@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MyPayslipsTab } from '@/pages/self/MyPayslipsTab';
 import { MyLeavesTab } from '@/pages/self/MyLeavesTab';
+import { MyAdvancesTab } from '@/pages/self/MyAdvancesTab';
 import { MyReviewsTab } from '@/pages/self/MyReviewsTab';
 import { PeerFeedbackTab } from '@/pages/self/PeerFeedbackTab';
 
@@ -16,6 +17,7 @@ export function SelfServicePage() {
         <TabsList>
           <TabsTrigger value="payslips">{t('nav.myPayslips')}</TabsTrigger>
           <TabsTrigger value="leaves">{t('nav.myLeaves')}</TabsTrigger>
+          <TabsTrigger value="advances">{t('nav.myAdvances')}</TabsTrigger>
           <TabsTrigger value="reviews">{t('nav.myReviews')}</TabsTrigger>
           <TabsTrigger value="peerFeedback">{t('nav.peerFeedback')}</TabsTrigger>
         </TabsList>
@@ -24,6 +26,9 @@ export function SelfServicePage() {
         </TabsContent>
         <TabsContent value="leaves">
           <MyLeavesTab />
+        </TabsContent>
+        <TabsContent value="advances">
+          <MyAdvancesTab />
         </TabsContent>
         <TabsContent value="reviews">
           <MyReviewsTab />
