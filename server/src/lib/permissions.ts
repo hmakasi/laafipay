@@ -32,10 +32,13 @@ export type Permission =
   | 'settings:write'
   | 'audit:read'
   | 'compta:access'
+  | 'advances:read'
+  | 'advances:approve'
   | 'self:payslips'
   | 'self:leaves'
   | 'self:profile'
-  | 'self:reviews';
+  | 'self:reviews'
+  | 'self:advances';
 
 export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   admin: [
@@ -48,7 +51,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'reports:read', 'reports:export',
     'users:read', 'users:write', 'settings:read', 'settings:write', 'audit:read',
     'compta:access',
-    'self:payslips', 'self:leaves', 'self:profile', 'self:reviews',
+    'advances:read', 'advances:approve',
+    'self:payslips', 'self:leaves', 'self:profile', 'self:reviews', 'self:advances',
   ],
   hr_manager: [
     'employees:read', 'employees:write',
@@ -58,14 +62,15 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'leaves:read', 'leaves:write', 'leaves:approve', 'leaves:read_team',
     'reviews:read', 'reviews:write', 'reviews:manage_team',
     'reports:read', 'reports:export',
-    'self:payslips', 'self:leaves', 'self:profile', 'self:reviews',
+    'advances:read', 'advances:approve',
+    'self:payslips', 'self:leaves', 'self:profile', 'self:reviews', 'self:advances',
   ],
   manager: [
     'employees:read',
     'leaves:read', 'leaves:approve', 'leaves:read_team',
     'reviews:manage_team',
     'reports:read',
-    'self:payslips', 'self:leaves', 'self:profile', 'self:reviews',
+    'self:payslips', 'self:leaves', 'self:profile', 'self:reviews', 'self:advances',
   ],
   accountant: [
     'employees:read',
@@ -75,9 +80,10 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'reports:read', 'reports:export',
     'audit:read',
     'compta:access',
-    'self:payslips', 'self:leaves', 'self:profile', 'self:reviews',
+    'advances:read', 'advances:approve',
+    'self:payslips', 'self:leaves', 'self:profile', 'self:reviews', 'self:advances',
   ],
-  employee: ['self:payslips', 'self:leaves', 'self:profile', 'self:reviews'],
+  employee: ['self:payslips', 'self:leaves', 'self:profile', 'self:reviews', 'self:advances'],
 };
 
 export function hasPermission(role: UserRole, permission: Permission): boolean {

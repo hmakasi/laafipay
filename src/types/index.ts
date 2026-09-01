@@ -47,11 +47,15 @@ export type Permission =
   | 'audit:read'
   // LaafiCompta — réservé admin/comptable, voir ROLE_PERMISSIONS
   | 'compta:access'
+  // Avances sur salaire
+  | 'advances:read'
+  | 'advances:approve'
   // Self-service
   | 'self:payslips'
   | 'self:leaves'
   | 'self:profile'
-  | 'self:reviews';
+  | 'self:reviews'
+  | 'self:advances';
 
 // ============================================================
 // User & Auth

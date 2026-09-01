@@ -34,10 +34,13 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'settings:write',
     'audit:read',
     'compta:access',
+    'advances:read',
+    'advances:approve',
     'self:payslips',
     'self:leaves',
     'self:profile',
     'self:reviews',
+    'self:advances',
   ],
 
   hr_manager: [
@@ -60,10 +63,13 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'reviews:manage_team',
     'reports:read',
     'reports:export',
+    'advances:read',
+    'advances:approve',
     'self:payslips',
     'self:leaves',
     'self:profile',
     'self:reviews',
+    'self:advances',
   ],
 
   manager: [
@@ -77,6 +83,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'self:leaves',
     'self:profile',
     'self:reviews',
+    'self:advances',
   ],
 
   accountant: [
@@ -89,10 +96,13 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'reports:export',
     'audit:read',
     'compta:access',
+    'advances:read',
+    'advances:approve',
     'self:payslips',
     'self:leaves',
     'self:profile',
     'self:reviews',
+    'self:advances',
   ],
 
   employee: [
@@ -100,6 +110,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'self:leaves',
     'self:profile',
     'self:reviews',
+    'self:advances',
   ],
 };
 
