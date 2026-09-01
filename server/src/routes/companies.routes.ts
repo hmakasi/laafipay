@@ -184,9 +184,13 @@ const customRubricSchema = z.object({
 const payrollConfigSchema = z.object({
   activeRubrics: z.array(z.string()),
   customRubrics: z.array(customRubricSchema),
+  // Optionnel : un appelant qui ne l'envoie pas ne réinitialise pas la
+  // valeur existante en base (voir upsert ci-dessous) — cohérent avec le
+  // fait que ce champ a été ajouté après coup, sans écran dédié encore.
+  maxAdvancePercent: z.number().min(0).max(100).optional(),
 });
 
-const EMPTY_PAYROLL_CONFIG = { activeRubrics: [] as string[], customRubrics: [] as unknown[] };
+const EMPTY_PAYROLL_CONFIG = { activeRubrics: [] as string[], customRubrics: [] as unknown[], maxAdvancePercent: 30 };
 
 companiesRouter.get(
   '/payroll-config',
@@ -194,7 +198,13 @@ companiesRouter.get(
   asyncHandler(async (req, res) => {
     const config = await prisma.payrollConfig.findUnique({ where: { companyId: req.user!.companyId } });
     res.json(
-      config ? { activeRubrics: config.activeRubrics, customRubrics: config.customRubrics } : EMPTY_PAYROLL_CONFIG
+      config
+        ? {
+            activeRubrics: config.activeRubrics,
+            customRubrics: config.customRubrics,
+            maxAdvancePercent: config.maxAdvancePercent,
+          }
+        : EMPTY_PAYROLL_CONFIG
     );
   })
 );
@@ -212,13 +222,19 @@ companiesRouter.put(
         companyId,
         activeRubrics: data.activeRubrics,
         customRubrics: data.customRubrics as any,
+        ...(data.maxAdvancePercent !== undefined ? { maxAdvancePercent: data.maxAdvancePercent } : {}),
       },
       update: {
         activeRubrics: data.activeRubrics,
         customRubrics: data.customRubrics as any,
+        ...(data.maxAdvancePercent !== undefined ? { maxAdvancePercent: data.maxAdvancePercent } : {}),
       },
     });
-    res.json({ activeRubrics: config.activeRubrics, customRubrics: config.customRubrics });
+    res.json({
+      activeRubrics: config.activeRubrics,
+      customRubrics: config.customRubrics,
+      maxAdvancePercent: config.maxAdvancePercent,
+    });
   })
 );
 
