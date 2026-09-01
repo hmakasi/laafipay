@@ -758,6 +758,12 @@ model PaymentTransaction {
 // solde n'est pas épuisé en un cycle, l'avance reste "en_remboursement" et
 // réapparaît pré-remplie au cycle suivant (voir syncEntries,
 // payroll.routes.ts) jusqu'à remboursement complet.
+// Contrainte hors-bande (pas exprimable dans ce DSL Prisma) : un index
+// unique partiel sur (employeeId) filtré aux statuts actifs
+// (ACTIVE_ADVANCE_STATUSES, lib/salaryAdvances.ts) garantit en base qu'un
+// employé n'a jamais deux avances actives simultanément, même sous
+// concurrence — voir la migration add_salary_advance_active_unique_index
+// et le catch P2002 dans routes/advances.routes.ts (POST /).
 model SalaryAdvance {
   id                  String              @id @default(cuid())
   companyId           String

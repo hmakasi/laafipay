@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import request from 'supertest';
+import { Prisma } from '@prisma/client';
 
 const mockFindMany = vi.fn();
 const mockFindFirst = vi.fn();
@@ -87,6 +88,28 @@ describe('POST /api/advances', () => {
     expect(mockCreate).toHaveBeenCalledWith({
       data: { companyId: 'c1', employeeId: 'e1', amount: 20_000, remainingBalance: 20_000, channel: 'portail', status: 'en_attente' },
     });
+  });
+
+  it('convertit une violation de contrainte unique (P2002) en 400 — course entre deux requêtes concurrentes', async () => {
+    // findFirst ne voit rien (fast-path passé) mais create échoue quand même :
+    // simule deux requêtes concurrentes qui passent toutes les deux le check
+    // applicatif avant que la première n'ait committé — c'est l'index unique
+    // partiel en base (voir schema.prisma) qui tranche, pas le findFirst.
+    mockFindFirst.mockResolvedValueOnce(null);
+    mockEmployeeFindFirstOrThrow.mockResolvedValueOnce({ id: 'e1', baseSalary: 100_000 });
+    mockLegalSettingsFindFirst.mockResolvedValueOnce(legalSettings);
+    mockPayrollConfigFindUnique.mockResolvedValueOnce({ maxAdvancePercent: 30 });
+    mockCreate.mockRejectedValueOnce(
+      new Prisma.PrismaClientKnownRequestError('Unique constraint failed on the fields: (`employeeId`)', {
+        code: 'P2002',
+        clientVersion: '6.19.3',
+      })
+    );
+
+    const res = await request(app).post('/api/advances').set('Authorization', `Bearer ${token}`).send({ amount: 20_000 });
+
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/déjà une avance en cours/);
   });
 });
 

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { Request } from 'express';
 import { z } from 'zod';
-import { SalaryAdvance } from '@prisma/client';
+import { Prisma, SalaryAdvance } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { authenticate, authorize } from '../middleware/auth.js';
@@ -121,16 +121,29 @@ advancesRouter.post(
       throw new HttpError(400, `Le montant demandé dépasse le plafond autorisé (${maxAdvanceAmount})`);
     }
 
-    const created = await prisma.salaryAdvance.create({
-      data: {
-        companyId: user.companyId,
-        employeeId: user.employeeId,
-        amount,
-        remainingBalance: amount,
-        channel: 'portail',
-        status: 'en_attente',
-      },
-    });
+    // Le findFirst ci-dessus est le chemin rapide pour le message utilisateur
+    // dans le cas courant ; la vraie garantie sous concurrence (double-clic,
+    // deux onglets, retry) est l'index unique partiel en base — voir le
+    // commentaire sur SalaryAdvance dans schema.prisma. P2002 = violation de
+    // cet index, convertie ici dans le même message 400 que le fast-path.
+    let created: SalaryAdvance;
+    try {
+      created = await prisma.salaryAdvance.create({
+        data: {
+          companyId: user.companyId,
+          employeeId: user.employeeId,
+          amount,
+          remainingBalance: amount,
+          channel: 'portail',
+          status: 'en_attente',
+        },
+      });
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        throw new HttpError(400, 'Vous avez déjà une avance en cours');
+      }
+      throw err;
+    }
     res.status(201).json(toAdvanceDTO(created));
   })
 );
