@@ -20,6 +20,7 @@ import {
 const MANDATORY_RUBRIC_KEYS = new Set(['baseSalary', 'cnss', 'its']);
 import { generatePayslipsForCycle } from './payslips.routes.js';
 import { dispatchComptaEvent } from '../lib/comptaBridge.js';
+import { applyAdvanceDeductionsForCycle, fetchOutstandingAdvancesByEmployee } from '../lib/salaryAdvances.js';
 
 export const payrollRouter = Router();
 payrollRouter.use(authenticate);
@@ -89,11 +90,12 @@ function toPayrollCycleDTO(c: PayrollCycle & { entries: PayrollEntry[] }) {
 // ne touche jamais les lignes déjà présentes) — un employé ajouté après la
 // création du cycle doit y apparaître à la prochaine consultation.
 async function syncEntries(cycle: Pick<PayrollCycle, 'id' | 'companyId' | 'legalSettingsId'>) {
-  const [legalSettings, activeEmployees, existingEntries, payrollConfig] = await Promise.all([
+  const [legalSettings, activeEmployees, existingEntries, payrollConfig, outstandingAdvancesByEmployee] = await Promise.all([
     prisma.legalSettings.findUniqueOrThrow({ where: { id: cycle.legalSettingsId } }),
     prisma.employee.findMany({ where: { companyId: cycle.companyId, status: { not: 'offboarded' } } }),
     prisma.payrollEntry.findMany({ where: { cycleId: cycle.id }, select: { employeeId: true } }),
     prisma.payrollConfig.findUnique({ where: { companyId: cycle.companyId } }),
+    fetchOutstandingAdvancesByEmployee(cycle.companyId),
   ]);
 
   const existingEmployeeIds = new Set(existingEntries.map((e) => e.employeeId));
@@ -120,7 +122,8 @@ async function syncEntries(cycle: Pick<PayrollCycle, 'id' | 'companyId' | 'legal
           cnssEmployerRate: legalSettings.cnssEmployerRate,
           iutsBrackets,
         },
-        configuredRubrics
+        configuredRubrics,
+        outstandingAdvancesByEmployee.get(emp.id) ?? []
       );
       return {
         cycleId: cycle.id,
@@ -231,6 +234,11 @@ payrollRouter.post(
       data: { status: 'valide', validatedAt: new Date(), validatedBy },
       include: { entries: true },
     });
+
+    // Décompte automatique des avances sur salaire en cours pour cet
+    // employé — voir applyAdvanceDeductionsForCycle (lib/salaryAdvances.ts)
+    // et la spec "Intégration au cycle de paie".
+    await applyAdvanceDeductionsForCycle(updated.entries);
 
     // Déclenchement automatique : les bulletins doivent être disponibles
     // dans "Bulletin de paie" dès la validation, sans action manuelle

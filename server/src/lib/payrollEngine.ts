@@ -153,7 +153,8 @@ export interface ConfiguredRubrics {
 export function computeDefaultEntryForEmployee(
   baseSalary: number,
   legalSettings: LegalSettingsInput,
-  configuredRubrics?: ConfiguredRubrics
+  configuredRubrics?: ConfiguredRubrics,
+  outstandingAdvances: VariableElement[] = []
 ): PayrollEntryComputed {
   const indemnites: VariableElement[] = (configuredRubrics?.activeOptionalKeys ?? []).map((key) => ({
     id: `rubric-${key}`,
@@ -168,5 +169,5 @@ export function computeDefaultEntryForEmployee(
     type: 'prime',
   }));
 
-  return computePayrollEntry({ baseSalary, indemnites, primes }, legalSettings);
+  return computePayrollEntry({ baseSalary, indemnites, primes, avances: outstandingAdvances }, legalSettings);
 }
