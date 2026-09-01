@@ -156,11 +156,13 @@ export const PAYMENT_STATUS_VARIANT: Record<string, 'success' | 'warning' | 'sec
   annule: 'secondary',
 };
 
-export const ADVANCE_STATUS_VARIANT: Record<string, 'success' | 'warning' | 'secondary' | 'accent'> = {
-  demande_whatsapp: 'secondary',
+export const ADVANCE_STATUS_VARIANT: Record<string, 'success' | 'warning' | 'secondary' | 'accent' | 'destructive'> = {
+  en_attente: 'secondary',
   approuve: 'warning',
-  verse_mobile_money: 'success',
-  deduit: 'accent',
+  rejete: 'destructive',
+  verse_mobile_money: 'accent',
+  en_remboursement: 'warning',
+  rembourse: 'success',
 };
 
 export const SEND_STATUS_VARIANT: Record<string, 'success' | 'warning' | 'secondary' | 'destructive'> = {
