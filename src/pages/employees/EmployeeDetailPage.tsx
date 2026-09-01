@@ -36,6 +36,7 @@ import { CONTRACT_STATUS_VARIANT, EMPLOYEE_STATUS_VARIANT } from '@/lib/constant
 import { downloadBlob, formatCurrency, formatDate, getInitials } from '@/lib/utils';
 import { NewContractDialog } from '@/pages/employees/NewContractDialog';
 import { NewAmendmentDialog } from '@/pages/employees/NewAmendmentDialog';
+import { EmployeeAccountTab } from '@/pages/employees/EmployeeAccountTab';
 import { EmployeeDocument } from '@/types';
 
 const DOCUMENT_TYPE_LABEL: Record<EmployeeDocument['type'], string> = {
@@ -198,6 +199,7 @@ export function EmployeeDetailPage() {
           <TabsTrigger value="salary">{t('employees.tabs.salary')}</TabsTrigger>
           <TabsTrigger value="documents">{t('employees.tabs.documents')}</TabsTrigger>
           <TabsTrigger value="career">{t('employees.tabs.career')}</TabsTrigger>
+          <TabsTrigger value="account">{t('employees.tabs.account')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="personal">
@@ -401,6 +403,10 @@ export function EmployeeDetailPage() {
               </ul>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="account">
+          <EmployeeAccountTab employee={emp} />
         </TabsContent>
       </Tabs>
     </div>
