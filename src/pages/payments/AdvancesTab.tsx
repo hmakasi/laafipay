@@ -8,10 +8,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { PermissionGate } from '@/components/auth/PermissionGate';
 import {
-  useAdvanceRequestsQuery,
+  useAdvancesQuery,
   useApproveAdvanceMutation,
-  useMarkAdvanceDeductedMutation,
   usePayAdvanceMutation,
+  useRejectAdvanceMutation,
 } from '@/hooks/useAdvances';
 import { useEmployeesQuery } from '@/hooks/useEmployees';
 import { useCurrentCompanyQuery } from '@/hooks/useCompanies';
@@ -22,13 +22,13 @@ import { formatCurrency, formatDate } from '@/lib/utils';
 export function AdvancesTab() {
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
-  const { data: advances, isLoading } = useAdvanceRequestsQuery();
+  const { data: advances, isLoading } = useAdvancesQuery();
   const { data: employeesPage } = useEmployeesQuery({ perPage: 1000 });
   const { data: company } = useCurrentCompanyQuery();
   const currencyCode = company?.currencyCode;
   const approveMutation = useApproveAdvanceMutation();
+  const rejectMutation = useRejectAdvanceMutation();
   const payMutation = usePayAdvanceMutation();
-  const deductMutation = useMarkAdvanceDeductedMutation();
 
   const employeeName = (employeeId: string) => {
     const emp = employeesPage?.data.find((e) => e.id === employeeId);
@@ -43,7 +43,17 @@ export function AdvancesTab() {
       await approveMutation.mutateAsync({ id, approvedBy: user.email });
       toast.success(t('payments.advances.approved'));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erreur lors de l\'approbation');
+      toast.error(err instanceof Error ? err.message : "Erreur lors de l'approbation");
+    }
+  };
+
+  const handleReject = async (id: string) => {
+    if (!user) return;
+    try {
+      await rejectMutation.mutateAsync({ id, rejectedBy: user.email });
+      toast.success(t('payments.advances.rejected'));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur lors du rejet');
     }
   };
 
@@ -53,15 +63,6 @@ export function AdvancesTab() {
       toast.success(t('payments.advances.paid'));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erreur lors du paiement');
-    }
-  };
-
-  const handleDeduct = async (id: string) => {
-    try {
-      await deductMutation.mutateAsync(id);
-      toast.success(t('payments.advances.deducted'));
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erreur lors de la déduction');
     }
   };
 
@@ -81,7 +82,7 @@ export function AdvancesTab() {
                 <TableHead>{t('app.amount')}</TableHead>
                 <TableHead>{t('payments.advances.requestedAt')}</TableHead>
                 <TableHead>{t('app.status')}</TableHead>
-                <PermissionGate permission="payments:initiate">
+                <PermissionGate permission="advances:approve">
                   <TableHead className="text-right">{t('app.actions')}</TableHead>
                 </PermissionGate>
               </TableRow>
@@ -103,26 +104,31 @@ export function AdvancesTab() {
                     <Badge variant={ADVANCE_STATUS_VARIANT[advance.status]}>
                       {t(`payments.advances.status_${advance.status}`)}
                     </Badge>
+                    {(advance.status === 'en_remboursement' || advance.status === 'verse_mobile_money') && (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {t('payments.advances.remainingBalance')} : {formatCurrency(advance.remainingBalance, currencyCode)}
+                      </p>
+                    )}
                     {advance.reference && (
                       <p className="mt-1 text-xs text-muted-foreground">{advance.reference}</p>
                     )}
                   </TableCell>
-                  <PermissionGate permission="payments:initiate">
-                    <TableCell className="text-right">
-                      {advance.status === 'demande_whatsapp' && (
-                        <Button size="sm" variant="outline" onClick={() => handleApprove(advance.id)} disabled={approveMutation.isPending}>
-                          {t('payments.advances.approve')}
-                        </Button>
+                  <PermissionGate permission="advances:approve">
+                    <TableCell className="text-right space-x-2">
+                      {advance.status === 'en_attente' && (
+                        <>
+                          <Button size="sm" variant="outline" onClick={() => handleApprove(advance.id)} disabled={approveMutation.isPending}>
+                            {t('payments.advances.approve')}
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => handleReject(advance.id)} disabled={rejectMutation.isPending}>
+                            {t('payments.advances.reject')}
+                          </Button>
+                        </>
                       )}
                       {advance.status === 'approuve' && (
                         <Button size="sm" onClick={() => handlePay(advance.id)} disabled={payMutation.isPending}>
                           <Smartphone className="mr-2 h-4 w-4" />
                           {payMutation.isPending ? t('payments.advances.paying') : t('payments.advances.payViaMobileMoney')}
-                        </Button>
-                      )}
-                      {advance.status === 'verse_mobile_money' && (
-                        <Button size="sm" variant="outline" onClick={() => handleDeduct(advance.id)} disabled={deductMutation.isPending}>
-                          {t('payments.advances.markDeducted')}
                         </Button>
                       )}
                     </TableCell>
