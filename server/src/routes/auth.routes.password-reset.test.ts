@@ -87,6 +87,45 @@ describe('POST /api/auth/forgot-password', () => {
     expect(res.status).toBe(400);
     expect(mockFindUnique).not.toHaveBeenCalled();
   });
+
+  // Le message générique n'a de sens anti-énumération que si les deux
+  // branches (compte existant / inexistant) répondent en un temps
+  // comparable — sinon la latence elle-même révèle si le compte existe.
+  // La branche "compte existant" ne doit donc pas attendre l'envoi de
+  // l'e-mail (appel réseau vers Resend) avant de répondre.
+  it("répond sans attendre la fin de l'envoi de l'e-mail", async () => {
+    mockFindUnique.mockResolvedValueOnce({
+      id: 'u1',
+      email: 'a@b.com',
+      firstName: 'Awa',
+      isActive: true,
+    });
+    mockUpdate.mockResolvedValueOnce({});
+    mockSendPasswordResetEmail.mockImplementationOnce(() => new Promise(() => {})); // ne résout jamais
+
+    const res = await request(app).post('/api/auth/forgot-password').send({ email: 'a@b.com' });
+
+    expect(res.status).toBe(200);
+  });
+
+  it("journalise côté serveur quand l'envoi de l'e-mail échoue", async () => {
+    mockFindUnique.mockResolvedValueOnce({
+      id: 'u1',
+      email: 'a@b.com',
+      firstName: 'Awa',
+      isActive: true,
+    });
+    mockUpdate.mockResolvedValueOnce({});
+    mockSendPasswordResetEmail.mockResolvedValueOnce({ ok: false, error: 'panne Resend' });
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await request(app).post('/api/auth/forgot-password').send({ email: 'a@b.com' });
+    // Laisse la microtask du sendPasswordResetEmail non-attendu se résoudre.
+    await new Promise((resolve) => setImmediate(resolve));
+
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('reset password'), 'panne Resend');
+    errorSpy.mockRestore();
+  });
 });
 
 describe('POST /api/auth/reset-password', () => {

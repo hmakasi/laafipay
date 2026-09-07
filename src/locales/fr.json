@@ -98,7 +98,6 @@
     "resetPasswordSubtitle": "Choisissez un nouveau mot de passe pour votre compte.",
     "newPassword": "Nouveau mot de passe",
     "confirmPassword": "Confirmer le mot de passe",
-    "passwordsDontMatch": "Les mots de passe ne correspondent pas",
     "resetPasswordSubmit": "Réinitialiser le mot de passe",
     "resetPasswordSuccess": "Mot de passe réinitialisé",
     "resetPasswordSuccessDetail": "Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.",

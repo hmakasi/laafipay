@@ -71,7 +71,10 @@ const forgotPasswordSchema = z.object({
 // Répond toujours 200 avec le même message, que le compte existe, soit
 // désactivé, ou reçoive bien l'e-mail — sinon la réponse elle-même
 // permettrait à un attaquant de tester quels e-mails ont un compte
-// LaafiPay (anti-énumération).
+// LaafiPay (anti-énumération). Pour la même raison, on n'attend PAS la fin
+// de l'envoi (appel réseau vers Resend) avant de répondre : sinon la
+// latence de réponse elle-même distinguerait un compte existant d'un
+// compte inexistant, même avec un corps de réponse identique.
 authRouter.post(
   '/forgot-password',
   asyncHandler(async (req, res) => {
@@ -86,9 +89,11 @@ authRouter.post(
         data: { resetTokenHash, resetTokenExpiresAt: new Date(Date.now() + RESET_TOKEN_TTL_MS) },
       });
 
-      await sendPasswordResetEmail(user.email, {
+      sendPasswordResetEmail(user.email, {
         firstName: user.firstName,
         resetUrl: `https://laafipay.com/reset-password/${rawToken}`,
+      }).then((result) => {
+        if (!result.ok) console.error("[auth] échec de l'envoi de l'e-mail reset password", result.error);
       });
     }
 

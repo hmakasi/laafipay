@@ -334,8 +334,10 @@ model User {
   // Hash SHA-256 du token de réinitialisation en cours (jamais le token en
   // clair — voir routes/auth.routes.ts) + son expiration. Les deux sont null
   // en dehors d'une demande de reset active, et remis à null après usage
-  // (token à usage unique).
-  resetTokenHash       String?
+  // (token à usage unique). @unique donne l'index nécessaire à la recherche
+  // par token dans /reset-password (sinon full scan de User) ; les NULL
+  // multiples restent autorisés sous une contrainte unique Postgres.
+  resetTokenHash       String?   @unique
   resetTokenExpiresAt  DateTime?
   role         UserRole
   employeeId   String?   @unique
