@@ -95,7 +95,12 @@ export function LoginPage() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t('auth.password')}</FormLabel>
+                    <div className="flex items-center justify-between">
+                      <FormLabel>{t('auth.password')}</FormLabel>
+                      <Link to="/forgot-password" className="text-xs text-primary hover:underline">
+                        {t('auth.forgotPassword')}
+                      </Link>
+                    </div>
                     <FormControl>
                       <Input type="password" placeholder="••••••••" {...field} />
                     </FormControl>

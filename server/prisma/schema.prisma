@@ -331,6 +331,12 @@ model User {
   // généré à la création du compte (voir admin.routes.ts) — force l'écran
   // de changement de mot de passe dès la première connexion.
   mustChangePassword Boolean @default(false)
+  // Hash SHA-256 du token de réinitialisation en cours (jamais le token en
+  // clair — voir routes/auth.routes.ts) + son expiration. Les deux sont null
+  // en dehors d'une demande de reset active, et remis à null après usage
+  // (token à usage unique).
+  resetTokenHash       String?
+  resetTokenExpiresAt  DateTime?
   role         UserRole
   employeeId   String?   @unique
   employee     Employee? @relation(fields: [employeeId], references: [id])

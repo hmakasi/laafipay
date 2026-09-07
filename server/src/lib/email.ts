@@ -43,6 +43,40 @@ export async function sendAccountCredentialsEmail(
   }
 }
 
+// Même dégradation gracieuse que sendAccountCredentialsEmail — voir
+// routes/auth.routes.ts, qui répond succès même si l'envoi échoue (pas de
+// signal côté client permettant de distinguer un échec d'envoi d'un compte
+// inexistant, cf. anti-énumération).
+export async function sendPasswordResetEmail(
+  toEmail: string,
+  params: { firstName: string; resetUrl: string }
+): Promise<EmailSendResult> {
+  const apiKey = process.env.RESEND_API_KEY;
+  const fromEmail = process.env.RESEND_FROM_EMAIL;
+  if (!apiKey || !fromEmail) {
+    return { ok: false, error: 'RESEND_API_KEY / RESEND_FROM_EMAIL non configurés' };
+  }
+
+  try {
+    const resend = new Resend(apiKey);
+    const { error } = await resend.emails.send({
+      from: fromEmail,
+      to: toEmail,
+      subject: 'Réinitialisation de votre mot de passe LaafiPay',
+      html: `
+        <p>Bonjour ${params.firstName},</p>
+        <p>Une demande de réinitialisation de mot de passe a été effectuée pour votre compte LaafiPay.</p>
+        <p><a href="${params.resetUrl}">Cliquez ici pour choisir un nouveau mot de passe</a></p>
+        <p>Ce lien expire dans 1 heure. Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail.</p>
+      `,
+    });
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
 // Même dégradation gracieuse que sendAccountCredentialsEmail (l'appelant
 // décide quoi faire si l'envoi échoue — voir routes/employees.routes.ts, qui
 // renvoie alors le mot de passe généré dans la réponse pour transmission

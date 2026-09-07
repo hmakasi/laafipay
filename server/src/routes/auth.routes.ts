@@ -1,11 +1,15 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
+import { randomBytes, createHash } from 'crypto';
 import { prisma } from '../lib/prisma.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { toUserDTO } from '../lib/dto.js';
 import { authenticate, signToken } from '../middleware/auth.js';
-import { UnauthorizedError } from '../lib/errors.js';
+import { UnauthorizedError, HttpError } from '../lib/errors.js';
+import { sendPasswordResetEmail } from '../lib/email.js';
+
+const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
 
 export const authRouter = Router();
 
@@ -57,6 +61,64 @@ authRouter.get(
     const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
     if (!user) throw new UnauthorizedError();
     res.json(toUserDTO(user));
+  })
+);
+
+const forgotPasswordSchema = z.object({
+  email: z.string().email(),
+});
+
+// Répond toujours 200 avec le même message, que le compte existe, soit
+// désactivé, ou reçoive bien l'e-mail — sinon la réponse elle-même
+// permettrait à un attaquant de tester quels e-mails ont un compte
+// LaafiPay (anti-énumération).
+authRouter.post(
+  '/forgot-password',
+  asyncHandler(async (req, res) => {
+    const { email } = forgotPasswordSchema.parse(req.body);
+
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (user && user.isActive) {
+      const rawToken = randomBytes(32).toString('hex');
+      const resetTokenHash = createHash('sha256').update(rawToken).digest('hex');
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { resetTokenHash, resetTokenExpiresAt: new Date(Date.now() + RESET_TOKEN_TTL_MS) },
+      });
+
+      await sendPasswordResetEmail(user.email, {
+        firstName: user.firstName,
+        resetUrl: `https://laafipay.com/reset-password/${rawToken}`,
+      });
+    }
+
+    res.json({ message: 'Si un compte existe avec cet e-mail, un lien de réinitialisation vient de lui être envoyé.' });
+  })
+);
+
+const resetPasswordSchema = z.object({
+  token: z.string().min(1),
+  newPassword: z.string().min(8),
+});
+
+authRouter.post(
+  '/reset-password',
+  asyncHandler(async (req, res) => {
+    const { token, newPassword } = resetPasswordSchema.parse(req.body);
+    const resetTokenHash = createHash('sha256').update(token).digest('hex');
+
+    const user = await prisma.user.findFirst({ where: { resetTokenHash } });
+    if (!user || !user.resetTokenExpiresAt || user.resetTokenExpiresAt < new Date()) {
+      throw new HttpError(400, 'Lien de réinitialisation invalide ou expiré');
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash, mustChangePassword: false, resetTokenHash: null, resetTokenExpiresAt: null },
+    });
+
+    res.json({ message: 'Mot de passe réinitialisé avec succès.' });
   })
 );
 
