@@ -125,10 +125,37 @@ describe('Intégration avances ↔ cycle de paie', () => {
     const res = await request(app)
       .post('/api/payroll/cycles/cyc1/validate')
       .set('Authorization', `Bearer ${hrToken}`)
-      .send({ validatedBy: 'hr@b.com' });
+      .send({});
 
     expect(res.status).toBe(200);
     expect(mockDeductionCreate).toHaveBeenCalledWith({ data: { advanceId: 'adv1', payrollEntryId: 'entry1', amount: 15_000 } });
     expect(mockAdvanceUpdate).toHaveBeenCalledWith({ where: { id: 'adv1' }, data: { remainingBalance: 0, status: 'rembourse' } });
+  });
+
+  // Doit venir de la session, jamais du client — sinon n'importe qui peut
+  // s'attribuer la validation d'un cycle de paie entier (voir audit
+  // sécurité, H2).
+  it("ignore un validatedBy fourni par le client et utilise l'e-mail de la session", async () => {
+    mockCycleFindFirst.mockResolvedValueOnce({ id: 'cyc1', companyId: 'c1', legalSettingsId: 'ls1' });
+    mockLegalSettingsFindUnique.mockResolvedValueOnce(legalSettings);
+    mockEmployeeFindMany.mockResolvedValueOnce([]);
+    mockEntryFindMany.mockResolvedValueOnce([]);
+    mockPayrollConfigFindUnique.mockResolvedValueOnce(null);
+    mockAdvanceFindMany.mockResolvedValueOnce([]);
+    mockEntryUpdateMany.mockResolvedValueOnce({ count: 0 });
+    mockCycleUpdate.mockResolvedValueOnce({
+      id: 'cyc1', period: '2026-09', month: 9, year: 2026, status: 'valide',
+      createdAt: new Date(), validatedAt: new Date(), validatedBy: 'hr@b.com',
+      entries: [],
+    });
+
+    await request(app)
+      .post('/api/payroll/cycles/cyc1/validate')
+      .set('Authorization', `Bearer ${hrToken}`)
+      .send({ validatedBy: 'quelquun-dautre@evil.com' });
+
+    expect(mockCycleUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ validatedBy: 'hr@b.com' }) })
+    );
   });
 });

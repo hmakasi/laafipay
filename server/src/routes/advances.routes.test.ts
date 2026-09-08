@@ -133,14 +133,54 @@ describe('POST /api/advances/:id/approve', () => {
     mockUpdate.mockResolvedValueOnce({
       id: 'adv1', status: 'approuve', requestedAt: new Date(), approvedAt: new Date(), approvedBy: 'hr@b.com',
     });
-    const res = await request(app).post('/api/advances/adv1/approve').set('Authorization', `Bearer ${hrToken}`).send({ approvedBy: 'hr@b.com' });
+    const res = await request(app).post('/api/advances/adv1/approve').set('Authorization', `Bearer ${hrToken}`).send({});
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('approuve');
   });
 
+  // Doit venir de la session, jamais du client — sinon n'importe qui peut
+  // s'attribuer l'approbation à un autre nom, cassant la valeur probante
+  // de la piste d'audit sur une action financière.
+  it("ignore un approvedBy fourni par le client et utilise l'e-mail de la session", async () => {
+    mockFindFirst.mockResolvedValueOnce({ id: 'adv1', status: 'en_attente' });
+    mockUpdate.mockResolvedValueOnce({ id: 'adv1', status: 'approuve', requestedAt: new Date() });
+
+    await request(app)
+      .post('/api/advances/adv1/approve')
+      .set('Authorization', `Bearer ${hrToken}`)
+      .send({ approvedBy: 'quelquun-dautre@evil.com' });
+
+    expect(mockUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ approvedBy: 'hr@b.com' }) })
+    );
+  });
+
   it('refuse un employé simple (sans advances:approve)', async () => {
     const employeeToken = signToken({ id: 'u1', email: 'a@b.com', role: 'employee', companyId: 'c1', employeeId: 'e1' });
-    const res = await request(app).post('/api/advances/adv1/approve').set('Authorization', `Bearer ${employeeToken}`).send({ approvedBy: 'a@b.com' });
+    const res = await request(app).post('/api/advances/adv1/approve').set('Authorization', `Bearer ${employeeToken}`).send({});
     expect(res.status).toBe(403);
+  });
+});
+
+describe('POST /api/advances/:id/reject', () => {
+  beforeEach(() => {
+    mockFindFirst.mockReset();
+    mockUpdate.mockReset();
+  });
+
+  const hrToken = signToken({ id: 'u3', email: 'hr@b.com', role: 'hr_manager', companyId: 'c1', employeeId: 'e2' });
+
+  it("ignore un rejectedBy fourni par le client et utilise l'e-mail de la session", async () => {
+    mockFindFirst.mockResolvedValueOnce({ id: 'adv1', status: 'en_attente' });
+    mockUpdate.mockResolvedValueOnce({ id: 'adv1', status: 'rejete', requestedAt: new Date() });
+
+    await request(app)
+      .post('/api/advances/adv1/reject')
+      .set('Authorization', `Bearer ${hrToken}`)
+      .send({ rejectedBy: 'quelquun-dautre@evil.com', reason: 'test' });
+
+    expect(mockUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ rejectedBy: 'hr@b.com' }) })
+    );
   });
 });

@@ -125,10 +125,36 @@ const createOrderSchema = z.object({
   items: z.array(z.object({ employeeId: z.string(), amount: z.number().positive() })).min(1),
 });
 
+// Tolérance pour d'éventuels écarts d'arrondi flottant sur salaireNet —
+// pas pour laisser passer un montant réellement différent.
+const AMOUNT_MATCH_TOLERANCE = 1;
+
 async function createOrder(companyId: string, createdBy: string, type: PaymentOrderType, body: z.infer<typeof createOrderSchema>) {
   const { validated, reason } = await getPaymentValidationForCycle(companyId, body.cycleId);
   if (!validated) {
     throw new HttpError(409, reason ?? "Le paiement de ce cycle n'est pas encore autorisé par la comptabilité.");
+  }
+
+  // Le montant de chaque item vient du client (RH) — sans ce recoupement,
+  // rien n'empêche un montant erroné ou gonflé d'aboutir dans un vrai ordre
+  // de paiement (et, pour un virement bancaire, dans le CSV exporté), en ne
+  // comptant que sur la vigilance visuelle du comptable à la validation
+  // (voir audit sécurité, M3).
+  const entries = await prisma.payrollEntry.findMany({
+    where: { cycleId: body.cycleId, employeeId: { in: body.items.map((i) => i.employeeId) } },
+  });
+  const netPayByEmployeeId = new Map(entries.map((e) => [e.employeeId, e.salaireNet]));
+  for (const item of body.items) {
+    const netPay = netPayByEmployeeId.get(item.employeeId);
+    if (netPay === undefined) {
+      throw new HttpError(400, `Aucun bulletin de paie trouvé pour l'employé ${item.employeeId} sur ce cycle`);
+    }
+    if (Math.abs(item.amount - netPay) > AMOUNT_MATCH_TOLERANCE) {
+      throw new HttpError(
+        400,
+        `Le montant soumis pour l'employé ${item.employeeId} (${item.amount}) ne correspond pas au salaire net de son bulletin (${netPay})`
+      );
+    }
   }
 
   const employees = await prisma.employee.findMany({

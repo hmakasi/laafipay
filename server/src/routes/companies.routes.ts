@@ -8,6 +8,7 @@ import { asyncHandler } from '../lib/asyncHandler.js';
 import { authenticate, authorize } from '../middleware/auth.js';
 import { HttpError, NotFoundError } from '../lib/errors.js';
 import { DEFAULT_COMPETENCIES } from '../lib/reviewCompetencies.js';
+import { sensitiveActionRateLimiter } from '../lib/rateLimit.js';
 
 export const companiesRouter = Router();
 
@@ -86,20 +87,17 @@ function toCompanyDTO(c: any) {
 // génère le mot de passe et crée réellement l'entreprise + l'utilisateur.
 companiesRouter.post(
   '/signup',
+  sensitiveActionRateLimiter,
   asyncHandler(async (req, res) => {
     const { companyName, countryCode, currencyCode, admin } = signupSchema.parse(req.body);
 
-    const existingUser = await prisma.user.findUnique({ where: { email: admin.email } });
-    if (existingUser) {
-      throw new HttpError(409, 'Cette adresse e-mail est déjà utilisée');
-    }
-    const existingRequest = await prisma.signupRequest.findFirst({
-      where: { email: admin.email, status: 'en_attente' },
-    });
-    if (existingRequest) {
-      throw new HttpError(409, 'Une demande est déjà en attente pour cette adresse e-mail');
-    }
-
+    // Pas de vérification d'unicité ici, volontairement : une réponse
+    // différente selon qu'un compte ou une demande existe déjà pour cet
+    // e-mail permettrait à un attaquant non authentifié d'énumérer les
+    // e-mails admin enregistrés sur toute la plateforme (voir audit
+    // sécurité, H3). Le conflit réel (e-mail déjà pris) est détecté et géré
+    // en privé, côté admin LaafiPay authentifié, à l'approbation — voir
+    // admin.routes.ts.
     await prisma.signupRequest.create({
       data: {
         companyName,

@@ -148,9 +148,12 @@ advancesRouter.post(
   })
 );
 
-const approveSchema = z.object({ approvedBy: z.string() });
-const rejectSchema = z.object({ rejectedBy: z.string(), reason: z.string().optional() });
+const rejectSchema = z.object({ reason: z.string().optional() });
 
+// approvedBy/rejectedBy dérivés de la session (req.user!.email), jamais du
+// corps de la requête : sinon n'importe quel titulaire de advances:approve
+// peut s'attribuer l'action à un autre nom, cassant la valeur probante de
+// la piste d'audit sur une action financière (voir audit sécurité, H2).
 advancesRouter.post(
   '/:id/approve',
   authorize('advances:approve'),
@@ -162,10 +165,9 @@ advancesRouter.post(
       throw new HttpError(409, `Impossible d'approuver une avance au statut "${advance.status}"`);
     }
 
-    const { approvedBy } = approveSchema.parse(req.body);
     const updated = await prisma.salaryAdvance.update({
       where: { id: advance.id },
-      data: { status: 'approuve', approvedAt: new Date(), approvedBy },
+      data: { status: 'approuve', approvedAt: new Date(), approvedBy: req.user!.email },
     });
     res.json(toAdvanceDTO(updated));
   })
@@ -182,10 +184,10 @@ advancesRouter.post(
       throw new HttpError(409, `Impossible de rejeter une avance au statut "${advance.status}"`);
     }
 
-    const { rejectedBy, reason } = rejectSchema.parse(req.body);
+    const { reason } = rejectSchema.parse(req.body);
     const updated = await prisma.salaryAdvance.update({
       where: { id: advance.id },
-      data: { status: 'rejete', rejectedAt: new Date(), rejectedBy, rejectionReason: reason },
+      data: { status: 'rejete', rejectedAt: new Date(), rejectedBy: req.user!.email, rejectionReason: reason },
     });
     res.json(toAdvanceDTO(updated));
   })

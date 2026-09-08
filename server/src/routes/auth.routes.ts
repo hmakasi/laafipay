@@ -8,6 +8,7 @@ import { toUserDTO } from '../lib/dto.js';
 import { authenticate, signToken } from '../middleware/auth.js';
 import { UnauthorizedError, HttpError } from '../lib/errors.js';
 import { sendPasswordResetEmail } from '../lib/email.js';
+import { loginRateLimiter, sensitiveActionRateLimiter } from '../lib/rateLimit.js';
 
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
 // Temps de réponse plancher pour /forgot-password : sur Vercel, l'e-mail
@@ -26,6 +27,7 @@ const loginSchema = z.object({
 
 authRouter.post(
   '/login',
+  loginRateLimiter,
   asyncHandler(async (req, res) => {
     const { email, password } = loginSchema.parse(req.body);
 
@@ -86,6 +88,7 @@ const forgotPasswordSchema = z.object({
 // l'atténue en imposant un plancher commun aux deux branches.
 authRouter.post(
   '/forgot-password',
+  sensitiveActionRateLimiter,
   asyncHandler(async (req, res) => {
     const startedAt = Date.now();
     const { email } = forgotPasswordSchema.parse(req.body);

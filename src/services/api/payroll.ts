@@ -14,8 +14,12 @@ export async function createPayrollCycle(period: string): Promise<PayrollCycle> 
   return apiClient.post<PayrollCycle>('/payroll/cycles', { period });
 }
 
-export async function validatePayrollCycle(id: string, validatedBy: string): Promise<PayrollCycle> {
-  return apiClient.post<PayrollCycle>(`/payroll/cycles/${id}/validate`, { validatedBy });
+// `validatedBy` reste dans cette signature pour ne pas devoir toucher les
+// hooks/pages qui le fournissent déjà (ex. user.email), mais le serveur
+// ignore cette valeur : l'identité vient du JWT authentifié, jamais d'un
+// champ envoyé par le client (voir server/src/routes/payroll.routes.ts).
+export async function validatePayrollCycle(id: string, _validatedBy: string): Promise<PayrollCycle> {
+  return apiClient.post<PayrollCycle>(`/payroll/cycles/${id}/validate`);
 }
 
 export async function updatePayrollEntry(

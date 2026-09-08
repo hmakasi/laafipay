@@ -1,6 +1,7 @@
 import './lib/loadEnv.js';
 import express, { NextFunction, Request, Response } from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import { ZodError } from 'zod';
 import { authRouter } from './routes/auth.routes.js';
 import { employeesRouter } from './routes/employees.routes.js';
@@ -23,9 +24,9 @@ import { HttpError } from './lib/errors.js';
 
 const app = express();
 
+app.use(helmet());
 app.use(cors({ origin: process.env.CORS_ORIGIN ?? 'http://localhost:3000' }));
 app.use(express.json());
-app.use('/uploads', express.static('uploads'));
 
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 

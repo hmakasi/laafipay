@@ -18,12 +18,16 @@ export async function createAdvanceRequest(amount: number): Promise<SalaryAdvanc
   return apiClient.post<SalaryAdvance>('/advances', { amount });
 }
 
-export async function approveAdvanceRequest(id: string, approvedBy: string): Promise<SalaryAdvance> {
-  return apiClient.post<SalaryAdvance>(`/advances/${id}/approve`, { approvedBy });
+// `approvedBy`/`rejectedBy` restent dans ces signatures pour ne pas devoir
+// toucher les hooks/pages qui les fournissent déjà (ex. user.email), mais
+// le serveur ignore ces valeurs : l'identité vient du JWT authentifié,
+// jamais d'un champ envoyé par le client (voir server/src/routes/advances.routes.ts).
+export async function approveAdvanceRequest(id: string, _approvedBy: string): Promise<SalaryAdvance> {
+  return apiClient.post<SalaryAdvance>(`/advances/${id}/approve`);
 }
 
-export async function rejectAdvanceRequest(id: string, rejectedBy: string, reason?: string): Promise<SalaryAdvance> {
-  return apiClient.post<SalaryAdvance>(`/advances/${id}/reject`, { rejectedBy, reason });
+export async function rejectAdvanceRequest(id: string, _rejectedBy: string, reason?: string): Promise<SalaryAdvance> {
+  return apiClient.post<SalaryAdvance>(`/advances/${id}/reject`, { reason });
 }
 
 export async function payAdvanceRequestViaMobileMoney(id: string): Promise<SalaryAdvance> {

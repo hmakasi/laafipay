@@ -20,7 +20,16 @@ declare global {
   }
 }
 
-const JWT_SECRET = process.env.JWT_SECRET ?? 'change-me-in-production';
+// Pas de repli codé en dur : contrairement à CRON_SECRET/BOOTSTRAP_SECRET/
+// LAAFICOMPTA_API_KEY (qui échouent chacun proprement par requête si non
+// configurés), un JWT_SECRET manquant ou laissé à une valeur d'exemple
+// permettrait de forger un token pour n'importe quel rôle/entreprise —
+// on préfère un crash net au démarrage à un contournement d'authentification
+// silencieux en production.
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET doit être défini (voir server/.env.example)');
+}
 
 export function signToken(user: AuthUser): string {
   return jwt.sign(user, JWT_SECRET, { expiresIn: '7d' });

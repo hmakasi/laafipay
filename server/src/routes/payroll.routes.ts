@@ -216,13 +216,15 @@ payrollRouter.get(
   })
 );
 
-const validateCycleSchema = z.object({ validatedBy: z.string() });
-
+// validatedBy dérivé de la session (req.user!.email), jamais du corps de
+// la requête : sinon n'importe qui peut s'attribuer la validation d'un
+// cycle de paie entier, qui déclenche la génération des bulletins (voir
+// audit sécurité, H2).
 payrollRouter.post(
   '/cycles/:id/validate',
   authorize('payroll:approve'),
   asyncHandler(async (req, res) => {
-    const { validatedBy } = validateCycleSchema.parse(req.body);
+    const validatedBy = req.user!.email;
     const companyId = req.user!.companyId;
     const cycle = await prisma.payrollCycle.findFirst({ where: { id: req.params.id, companyId } });
     if (!cycle) throw new NotFoundError(`Cycle ${req.params.id} introuvable`);

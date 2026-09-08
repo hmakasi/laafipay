@@ -6,6 +6,20 @@ export interface EmailSendResult {
   error?: string;
 }
 
+// firstName/companyName viennent de formulaires utilisateur (inscription
+// publique, saisie RH) et sont interpolés tels quels dans du HTML brut —
+// sans échappement, un nom contenant du HTML permettrait d'injecter un lien
+// trompeur qui recouvre visuellement le vrai lien, depuis le domaine de
+// confiance de LaafiPay (voir audit sécurité, M2).
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // Ne lève jamais — même échec "gracieux" que sendPayslipWhatsAppNotification
 // (whatsapp.ts) : l'appelant décide quoi faire si l'envoi échoue (ici,
 // l'approbation de la demande reste valide même si l'e-mail ne part pas —
@@ -27,12 +41,12 @@ export async function sendAccountCredentialsEmail(
       to: toEmail,
       subject: `Votre compte LaafiPay — ${params.companyName}`,
       html: `
-        <p>Bonjour ${params.firstName},</p>
-        <p>Votre demande de création d'entreprise <strong>${params.companyName}</strong> sur LaafiPay a été approuvée.</p>
+        <p>Bonjour ${escapeHtml(params.firstName)},</p>
+        <p>Votre demande de création d'entreprise <strong>${escapeHtml(params.companyName)}</strong> sur LaafiPay a été approuvée.</p>
         <p>Voici vos identifiants de connexion :</p>
         <ul>
-          <li>Identifiant : <strong>${toEmail}</strong></li>
-          <li>Mot de passe temporaire : <strong>${params.password}</strong></li>
+          <li>Identifiant : <strong>${escapeHtml(toEmail)}</strong></li>
+          <li>Mot de passe temporaire : <strong>${escapeHtml(params.password)}</strong></li>
         </ul>
         <p>Connectez-vous sur <a href="https://laafipay.com/login">laafipay.com</a> puis changez ce mot de passe dès votre première connexion, depuis Paramètres.</p>
       `,
@@ -71,7 +85,7 @@ export async function sendPasswordResetEmail(
       to: toEmail,
       subject: `Réinitialisation de votre mot de passe LaafiPay (réf. ${ref})`,
       html: `
-        <p>Bonjour ${params.firstName},</p>
+        <p>Bonjour ${escapeHtml(params.firstName)},</p>
         <p>Une demande de réinitialisation de mot de passe a été effectuée pour votre compte LaafiPay.</p>
         <p><a href="${params.resetUrl}">Cliquez ici pour choisir un nouveau mot de passe</a></p>
         <p>Ce lien expire dans 1 heure. Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail.</p>
@@ -105,12 +119,12 @@ export async function sendEmployeeAccountCredentialsEmail(
       to: toEmail,
       subject: `Votre accès LaafiPay — ${params.companyName}`,
       html: `
-        <p>Bonjour ${params.firstName},</p>
-        <p>Un compte LaafiPay vient d'être créé pour vous chez <strong>${params.companyName}</strong>, pour accéder à votre espace salarié (bulletins de paie, congés, entretiens annuels).</p>
+        <p>Bonjour ${escapeHtml(params.firstName)},</p>
+        <p>Un compte LaafiPay vient d'être créé pour vous chez <strong>${escapeHtml(params.companyName)}</strong>, pour accéder à votre espace salarié (bulletins de paie, congés, entretiens annuels).</p>
         <p>Voici vos identifiants de connexion :</p>
         <ul>
-          <li>Identifiant : <strong>${toEmail}</strong></li>
-          <li>Mot de passe temporaire : <strong>${params.password}</strong></li>
+          <li>Identifiant : <strong>${escapeHtml(toEmail)}</strong></li>
+          <li>Mot de passe temporaire : <strong>${escapeHtml(params.password)}</strong></li>
         </ul>
         <p>Connectez-vous sur <a href="https://laafipay.com/login">laafipay.com</a> — un nouveau mot de passe vous sera demandé dès la première connexion.</p>
       `,

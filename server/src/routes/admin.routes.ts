@@ -8,6 +8,7 @@ import { isPlatformAdminEmail, requirePlatformAdmin } from '../lib/platformAdmin
 import { generatePassword } from '../lib/password.js';
 import { sendAccountCredentialsEmail } from '../lib/email.js';
 import { HttpError, NotFoundError, UnauthorizedError } from '../lib/errors.js';
+import { sensitiveActionRateLimiter } from '../lib/rateLimit.js';
 import bcrypt from 'bcryptjs';
 
 export const adminRouter = Router();
@@ -33,6 +34,7 @@ const bootstrapSchema = z.object({
 
 adminRouter.post(
   '/bootstrap',
+  sensitiveActionRateLimiter,
   asyncHandler(async (req, res) => {
     const secret = process.env.BOOTSTRAP_SECRET;
     if (!secret || req.headers.authorization !== `Bearer ${secret}`) {
