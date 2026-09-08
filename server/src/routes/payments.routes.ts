@@ -135,6 +135,14 @@ async function createOrder(companyId: string, createdBy: string, type: PaymentOr
     throw new HttpError(409, reason ?? "Le paiement de ce cycle n'est pas encore autorisé par la comptabilité.");
   }
 
+  // Un employeeId dupliqué, même avec un montant individuellement correct
+  // à chaque occurrence, créerait plusieurs transactions et doublerait le
+  // montant réellement versé à cet employé (voir audit sécurité, M3).
+  const employeeIds = body.items.map((i) => i.employeeId);
+  if (new Set(employeeIds).size !== employeeIds.length) {
+    throw new HttpError(400, "Un même employé ne peut pas apparaître plusieurs fois dans un ordre de paiement");
+  }
+
   // Le montant de chaque item vient du client (RH) — sans ce recoupement,
   // rien n'empêche un montant erroné ou gonflé d'aboutir dans un vrai ordre
   // de paiement (et, pour un virement bancaire, dans le CSV exporté), en ne

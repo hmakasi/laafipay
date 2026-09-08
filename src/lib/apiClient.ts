@@ -49,16 +49,15 @@ export const apiClient = {
   delete: <T>(path: string) => request<T>(path, { method: 'DELETE' }),
 };
 
-// Le backend renvoie des chemins relatifs pour les fichiers uploadés
-// (ex. "/uploads/logos/xyz.png"), servis par Express hors du préfixe /api.
-// Le frontend tourne sur une autre origine (port différent en dev, domaine
-// différent en prod) : sans ça, <img src="/uploads/..."> se résoudrait par
-// rapport à l'origine du frontend, pas du serveur qui héberge le fichier.
+// Logos et documents sont désormais des URL Vercel Blob absolues (voir
+// companies.routes.ts, employees.routes.ts, onboarding.routes.ts) — le
+// fallback relatif ci-dessous ne sert plus qu'à couvrir une éventuelle
+// donnée ancienne/mal formée plutôt qu'un cas d'usage normal.
 const SERVER_ORIGIN = BASE_URL.replace(/\/api\/?$/, '');
 
 export function resolveUploadUrl(path: string | undefined): string | undefined {
   if (!path) return undefined;
-  if (/^https?:\/\//.test(path)) return path; // déjà une URL absolue (ex. collée manuellement)
+  if (/^https?:\/\//.test(path)) return path; // cas normal désormais : URL Blob déjà absolue
   return `${SERVER_ORIGIN}${path}`;
 }
 

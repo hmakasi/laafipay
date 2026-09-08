@@ -24,6 +24,13 @@ import { HttpError } from './lib/errors.js';
 
 const app = express();
 
+// Sur Vercel, les requêtes arrivent via un unique proxy (l'edge network) qui
+// pose X-Forwarded-For — sans ceci, Express l'ignore et req.ip (utilisé par
+// express-rate-limit, voir lib/rateLimit.ts) vaut l'IP du proxy pour tout le
+// monde, regroupant tous les clients sous un même compteur au lieu de
+// limiter par IP réelle.
+app.set('trust proxy', 1);
+
 app.use(helmet());
 app.use(cors({ origin: process.env.CORS_ORIGIN ?? 'http://localhost:3000' }));
 app.use(express.json());

@@ -76,4 +76,26 @@ describe('POST /api/payments/orders/mobile-money — cross-check du montant', ()
     expect(res.status).toBe(400);
     expect(mockPaymentOrderCreate).not.toHaveBeenCalled();
   });
+
+  // Chaque item était validé indépendamment contre salaireNet — deux items
+  // pour le même employé, chacun valide individuellement, créaient deux
+  // transactions et doublaient le montant total versé (voir revue de code
+  // de l'audit sécurité, M3 — Important #2).
+  it('rejette un employeeId dupliqué dans items, même si chaque montant est individuellement correct', async () => {
+    mockPayrollEntryFindMany.mockResolvedValueOnce([{ employeeId: 'emp1', salaireNet: 174_000 }]);
+
+    const res = await request(app)
+      .post('/api/payments/orders/mobile-money')
+      .set('Authorization', `Bearer ${hrToken}`)
+      .send({
+        cycleId: 'cyc1',
+        items: [
+          { employeeId: 'emp1', amount: 174_000 },
+          { employeeId: 'emp1', amount: 174_000 },
+        ],
+      });
+
+    expect(res.status).toBe(400);
+    expect(mockPaymentOrderCreate).not.toHaveBeenCalled();
+  });
 });
