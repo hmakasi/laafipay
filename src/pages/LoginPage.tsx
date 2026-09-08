@@ -9,15 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { useAuthStore } from '@/store/authStore';
-import { DEMO_USERS } from '@/mocks/users';
-import { getInitials } from '@/lib/utils';
-
-// Mot de passe des comptes de démonstration seedés côté serveur (server/prisma/seed.ts).
-const DEMO_PASSWORD = 'Demo1234!';
 
 const loginSchema = z.object({
   email: z.string().min(1, 'Champ requis').email('Adresse e-mail invalide'),
@@ -52,18 +44,6 @@ export function LoginPage() {
       toast.error(t('auth.invalidCredentials'));
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  const handleDemoLogin = async (userId: string) => {
-    const user = DEMO_USERS.find((u) => u.id === userId);
-    if (!user) return;
-    try {
-      await login(user.email, DEMO_PASSWORD);
-      toast.success(t('auth.loginSuccess'));
-      navigate('/dashboard', { replace: true });
-    } catch {
-      toast.error(t('auth.invalidCredentials'));
     }
   };
 
@@ -113,36 +93,6 @@ export function LoginPage() {
               </Button>
             </form>
           </Form>
-
-          <div className="relative">
-            <Separator />
-            <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">
-              {t('auth.demoRole')}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 gap-2">
-            {DEMO_USERS.map((user) => (
-              <button
-                key={user.id}
-                type="button"
-                onClick={() => handleDemoLogin(user.id)}
-                className="flex items-center gap-3 rounded-md border px-3 py-2 text-left text-sm transition-colors hover:bg-accent"
-              >
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-primary/10 text-xs text-primary">
-                    {getInitials(user.firstName, user.lastName)}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="flex flex-1 items-center justify-between gap-2">
-                  <span className="block font-medium leading-none">
-                    {user.firstName} {user.lastName}
-                  </span>
-                  <Badge variant="accent">{t(`roles.${user.role}`)}</Badge>
-                </span>
-              </button>
-            ))}
-          </div>
 
           <p className="text-center text-sm text-muted-foreground">
             {t('auth.noAccount')}{' '}

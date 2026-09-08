@@ -73,8 +73,6 @@
     "signingIn": "Connexion en cours...",
     "invalidCredentials": "E-mail ou mot de passe incorrect",
     "loginSuccess": "Connexion réussie",
-    "demoRole": "Mode démo — Rôle actif",
-    "switchRole": "Changer de rôle",
     "createCompany": "Créer une entreprise",
     "companyName": "Nom de l'entreprise",
     "adminAccount": "Compte administrateur",
