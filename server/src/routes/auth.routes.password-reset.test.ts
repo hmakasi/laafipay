@@ -88,12 +88,14 @@ describe('POST /api/auth/forgot-password', () => {
     expect(mockFindUnique).not.toHaveBeenCalled();
   });
 
-  // Le message générique n'a de sens anti-énumération que si les deux
-  // branches (compte existant / inexistant) répondent en un temps
-  // comparable — sinon la latence elle-même révèle si le compte existe.
-  // La branche "compte existant" ne doit donc pas attendre l'envoi de
-  // l'e-mail (appel réseau vers Resend) avant de répondre.
-  it("répond sans attendre la fin de l'envoi de l'e-mail", async () => {
+  // Sur Vercel (fonctions serverless), l'environnement d'exécution est gelé
+  // dès que la réponse HTTP est envoyée — une promesse démarrée sans await
+  // n'a alors plus aucune garantie d'aller à son terme (voir la régression
+  // du 2026-09-08 : les e-mails de reset ne partaient jamais en prod tant
+  // que la route ne réattendait pas explicitement sendPasswordResetEmail).
+  // Il faut donc attendre l'envoi avant de répondre, quitte à accepter le
+  // canal de timing résiduel — MIN_RESPONSE_MS (voir plus bas) l'atténue.
+  it("attend la fin de l'envoi de l'e-mail avant de répondre", async () => {
     mockFindUnique.mockResolvedValueOnce({
       id: 'u1',
       email: 'a@b.com',
@@ -101,11 +103,21 @@ describe('POST /api/auth/forgot-password', () => {
       isActive: true,
     });
     mockUpdate.mockResolvedValueOnce({});
-    mockSendPasswordResetEmail.mockImplementationOnce(() => new Promise(() => {})); // ne résout jamais
+    let emailSettled = false;
+    mockSendPasswordResetEmail.mockImplementationOnce(
+      () =>
+        new Promise((resolve) =>
+          setTimeout(() => {
+            emailSettled = true;
+            resolve({ ok: true });
+          }, 20)
+        )
+    );
 
     const res = await request(app).post('/api/auth/forgot-password').send({ email: 'a@b.com' });
 
     expect(res.status).toBe(200);
+    expect(emailSettled).toBe(true);
   });
 
   it("journalise côté serveur quand l'envoi de l'e-mail échoue", async () => {
@@ -120,11 +132,23 @@ describe('POST /api/auth/forgot-password', () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     await request(app).post('/api/auth/forgot-password').send({ email: 'a@b.com' });
-    // Laisse la microtask du sendPasswordResetEmail non-attendu se résoudre.
-    await new Promise((resolve) => setImmediate(resolve));
 
     expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('reset password'), 'panne Resend');
     errorSpy.mockRestore();
+  });
+
+  // Atténuation résiduelle du canal de timing (voir forgotPasswordSchema
+  // au-dessus) : les deux branches doivent prendre un temps plancher
+  // comparable, pas seulement un corps de réponse identique.
+  it("impose un temps de réponse plancher même quand le compte n'existe pas", async () => {
+    mockFindUnique.mockResolvedValueOnce(null);
+
+    const startedAt = Date.now();
+    const res = await request(app).post('/api/auth/forgot-password').send({ email: 'inconnu@b.com' });
+    const elapsed = Date.now() - startedAt;
+
+    expect(res.status).toBe(200);
+    expect(elapsed).toBeGreaterThanOrEqual(90);
   });
 });
 

@@ -10,6 +10,12 @@ import { UnauthorizedError, HttpError } from '../lib/errors.js';
 import { sendPasswordResetEmail } from '../lib/email.js';
 
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
+// Temps de réponse plancher pour /forgot-password : sur Vercel, l'e-mail
+// doit être attendu (voir plus bas) donc le temps de réponse redevient un
+// signal d'énumération de comptes — ce plancher rapproche la latence de la
+// branche "compte inexistant" de celle d'un envoi réussi, sans bloquer un
+// envoi lent au-delà de cette valeur.
+const MIN_FORGOT_PASSWORD_RESPONSE_MS = 300;
 
 export const authRouter = Router();
 
@@ -71,13 +77,17 @@ const forgotPasswordSchema = z.object({
 // Répond toujours 200 avec le même message, que le compte existe, soit
 // désactivé, ou reçoive bien l'e-mail — sinon la réponse elle-même
 // permettrait à un attaquant de tester quels e-mails ont un compte
-// LaafiPay (anti-énumération). Pour la même raison, on n'attend PAS la fin
-// de l'envoi (appel réseau vers Resend) avant de répondre : sinon la
-// latence de réponse elle-même distinguerait un compte existant d'un
-// compte inexistant, même avec un corps de réponse identique.
+// LaafiPay (anti-énumération). L'envoi DOIT être attendu (await) : sur
+// Vercel, une promesse démarrée sans await n'a aucune garantie d'aboutir,
+// l'environnement d'exécution étant gelé dès la réponse envoyée — sans ce
+// await, l'e-mail ne partait jamais en prod (régression du 2026-09-08).
+// Attendre réintroduit un canal de timing (latence ≈ appel réseau Resend
+// pour un compte existant, ~immédiat sinon) ; MIN_FORGOT_PASSWORD_RESPONSE_MS
+// l'atténue en imposant un plancher commun aux deux branches.
 authRouter.post(
   '/forgot-password',
   asyncHandler(async (req, res) => {
+    const startedAt = Date.now();
     const { email } = forgotPasswordSchema.parse(req.body);
 
     const user = await prisma.user.findUnique({ where: { email } });
@@ -89,12 +99,16 @@ authRouter.post(
         data: { resetTokenHash, resetTokenExpiresAt: new Date(Date.now() + RESET_TOKEN_TTL_MS) },
       });
 
-      sendPasswordResetEmail(user.email, {
+      const emailResult = await sendPasswordResetEmail(user.email, {
         firstName: user.firstName,
         resetUrl: `https://laafipay.com/reset-password/${rawToken}`,
-      }).then((result) => {
-        if (!result.ok) console.error("[auth] échec de l'envoi de l'e-mail reset password", result.error);
       });
+      if (!emailResult.ok) console.error("[auth] échec de l'envoi de l'e-mail reset password", emailResult.error);
+    }
+
+    const elapsed = Date.now() - startedAt;
+    if (elapsed < MIN_FORGOT_PASSWORD_RESPONSE_MS) {
+      await new Promise((resolve) => setTimeout(resolve, MIN_FORGOT_PASSWORD_RESPONSE_MS - elapsed));
     }
 
     res.json({ message: 'Si un compte existe avec cet e-mail, un lien de réinitialisation vient de lui être envoyé.' });
