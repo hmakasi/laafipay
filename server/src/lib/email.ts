@@ -1,4 +1,5 @@
 import { Resend } from 'resend';
+import { randomBytes } from 'crypto';
 
 export interface EmailSendResult {
   ok: boolean;
@@ -59,10 +60,16 @@ export async function sendPasswordResetEmail(
 
   try {
     const resend = new Resend(apiKey);
+    // Réf. courte (aléatoire, sans lien avec le token de reset lui-même)
+    // pour que deux demandes successives n'aient pas le même sujet — sinon
+    // Gmail/Yahoo les regroupent dans une même conversation, et l'utilisateur
+    // peut se retrouver à cliquer sur un lien plus ancien déjà invalidé
+    // (un seul token actif à la fois par compte).
+    const ref = randomBytes(3).toString('hex');
     const { error } = await resend.emails.send({
       from: fromEmail,
       to: toEmail,
-      subject: 'Réinitialisation de votre mot de passe LaafiPay',
+      subject: `Réinitialisation de votre mot de passe LaafiPay (réf. ${ref})`,
       html: `
         <p>Bonjour ${params.firstName},</p>
         <p>Une demande de réinitialisation de mot de passe a été effectuée pour votre compte LaafiPay.</p>
