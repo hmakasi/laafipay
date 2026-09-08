@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-const WHATSAPP_NUMBER = '221781508698';
+const WHATSAPP_NUMBER = '22670360425';
 const WHATSAPP_MESSAGE = "Bonjour, j'ai une question concernant LaafiPay";
 const WHATSAPP_LINK = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_MESSAGE)}`;
 const CONTACT_EMAIL = 'info@laafipay.com';
