@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
-import { Archive, Check, Pencil, RotateCcw, ShieldCheck, X } from 'lucide-react';
+import { Archive, Check, Pencil, RotateCcw, ShieldCheck, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -26,6 +26,7 @@ import {
   useAdminCompaniesQuery,
   useApproveSignupRequestMutation,
   useArchiveAdminCompanyMutation,
+  useDeleteAdminCompanyMutation,
   useRejectSignupRequestMutation,
   useRestoreAdminCompanyMutation,
   useSignupRequestsQuery,
@@ -282,6 +283,7 @@ function CompaniesTab() {
 function ArchivedCompaniesTab() {
   const { data: companies, isLoading } = useAdminCompaniesQuery(true);
   const restoreMutation = useRestoreAdminCompanyMutation();
+  const deleteMutation = useDeleteAdminCompanyMutation();
 
   const handleRestore = async (company: AdminCompany) => {
     try {
@@ -289,6 +291,15 @@ function ArchivedCompaniesTab() {
       toast.success(`${company.name} restaurée`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erreur lors de la restauration');
+    }
+  };
+
+  const handleDelete = async (company: AdminCompany) => {
+    try {
+      await deleteMutation.mutateAsync(company.id);
+      toast.success(`${company.name} supprimée définitivement`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur lors de la suppression');
     }
   };
 
@@ -316,10 +327,33 @@ function ArchivedCompaniesTab() {
                 {c.employeeCount > 1 ? 's' : ''} · archivée le {c.archivedAt ? formatDate(c.archivedAt) : '—'}
               </div>
             </div>
-            <Button size="sm" variant="outline" disabled={restoreMutation.isPending} onClick={() => handleRestore(c)}>
-              <RotateCcw className="mr-2 h-4 w-4" />
-              Restaurer
-            </Button>
+            <div className="flex shrink-0 gap-2">
+              <Button size="sm" variant="outline" disabled={restoreMutation.isPending} onClick={() => handleRestore(c)}>
+                <RotateCcw className="mr-2 h-4 w-4" />
+                Restaurer
+              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button size="sm" variant="destructive" disabled={deleteMutation.isPending}>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Supprimer définitivement
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Supprimer définitivement {c.name} ?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Action irréversible : employés, paie, bulletins et comptes de cette entreprise seront effacés
+                      définitivement. Impossible à annuler, contrairement à l'archivage.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Annuler</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => handleDelete(c)}>Supprimer définitivement</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
           </CardContent>
         </Card>
       ))}

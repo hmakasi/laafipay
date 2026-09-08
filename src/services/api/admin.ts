@@ -38,3 +38,9 @@ export async function archiveAdminCompany(id: string): Promise<void> {
 export async function restoreAdminCompany(id: string): Promise<void> {
   return apiClient.post<void>(`/admin/companies/${id}/restore`);
 }
+
+// Suppression cascade irréversible (employés, paie, bulletins...) — voir
+// admin.routes.ts. Réservée aux entreprises déjà archivées côté UI.
+export async function deleteAdminCompany(id: string): Promise<void> {
+  return apiClient.delete<void>(`/admin/companies/${id}`);
+}

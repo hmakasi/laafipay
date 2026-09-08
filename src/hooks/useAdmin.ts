@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   approveSignupRequest,
   archiveAdminCompany,
+  deleteAdminCompany,
   getAdminCompanies,
   getSignupRequests,
   rejectSignupRequest,
@@ -68,6 +69,16 @@ export function useRestoreAdminCompanyMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => restoreAdminCompany(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-companies'] });
+    },
+  });
+}
+
+export function useDeleteAdminCompanyMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => deleteAdminCompany(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-companies'] });
     },
