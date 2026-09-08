@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 const WHATSAPP_NUMBER = '221781508698';
 const WHATSAPP_MESSAGE = "Bonjour, j'ai une question concernant LaafiPay";
 const WHATSAPP_LINK = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_MESSAGE)}`;
+const CONTACT_EMAIL = 'info@laafipay.com';
 
 // Extrait de l'ancien AboutContactSection.tsx : AboutSection.tsx ne doit
 // désormais contenir que le contenu "À propos" (en-tête + vision/fondatrice
@@ -25,6 +26,12 @@ export function ContactSection() {
             </a>
           </Button>
           <p className="mt-3 text-sm text-muted-foreground">{t('landing.contact.supportNote')}</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {t('landing.contact.orEmail')}{' '}
+            <a href={`mailto:${CONTACT_EMAIL}`} className="font-medium text-primary hover:underline">
+              {CONTACT_EMAIL}
+            </a>
+          </p>
         </div>
       </div>
     </section>

@@ -843,7 +843,8 @@
       "title": "Une question ?",
       "description": "Notre équipe vous répond rapidement.",
       "cta": "Discuter sur WhatsApp",
-      "supportNote": "Support réactif basé à Ouagadougou, disponible 6j/7 sur WhatsApp."
+      "supportNote": "Support réactif basé à Ouagadougou, disponible 6j/7 sur WhatsApp.",
+      "orEmail": "Ou écrivez-nous à"
     },
     "footer": {
       "tagline": "La gestion de la paie et des RH, simplifiée pour les entreprises burkinabè.",
