@@ -21,6 +21,8 @@ const signupSchema = z.object({
   companyName: z.string().min(1, 'Champ requis'),
   countryCode: z.enum(['BF', 'BJ', 'CD']),
   currencyCode: z.enum(['XOF', 'CDF', 'USD']),
+  employeeCount: z.coerce.number({ invalid_type_error: 'Champ requis' }).int().positive('Doit être supérieur à 0'),
+  phone: z.string().min(1, 'Champ requis'),
   firstName: z.string().min(1, 'Champ requis'),
   lastName: z.string().min(1, 'Champ requis'),
   email: z.string().min(1, 'Champ requis').email('Adresse e-mail invalide'),
@@ -41,6 +43,8 @@ export function SignupPage() {
       companyName: '',
       countryCode: 'BF',
       currencyCode: COUNTRY_META.BF.defaultCurrency,
+      employeeCount: 0,
+      phone: '',
       firstName: '',
       lastName: '',
       email: '',
@@ -69,6 +73,8 @@ export function SignupPage() {
         companyName: values.companyName,
         countryCode: values.countryCode,
         currencyCode: values.currencyCode,
+        employeeCount: values.employeeCount,
+        phone: values.phone,
         admin: {
           firstName: values.firstName,
           lastName: values.lastName,
@@ -189,6 +195,35 @@ export function SignupPage() {
                   )}
                 />
               )}
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="employeeCount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nombre de salariés</FormLabel>
+                      <FormControl>
+                        <Input type="number" min={1} {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Téléphone</FormLabel>
+                      <FormControl>
+                        <Input type="tel" placeholder="+226 70 00 00 00" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <div className="relative pt-2">
                 <Separator />

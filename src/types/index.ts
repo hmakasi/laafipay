@@ -84,6 +84,8 @@ export interface SignupRequest {
   companyName: string;
   countryCode: CountryCode;
   currencyCode: CurrencyCode;
+  employeeCount: number;
+  phone: string;
   firstName: string;
   lastName: string;
   email: string;

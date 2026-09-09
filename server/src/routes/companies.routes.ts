@@ -49,6 +49,8 @@ const signupSchema = z
     companyName: z.string().min(1),
     countryCode: z.enum(COUNTRY_CODES),
     currencyCode: z.enum(CURRENCY_CODES),
+    employeeCount: z.coerce.number().int().positive(),
+    phone: z.string().min(1),
     admin: z.object({
       firstName: z.string().min(1),
       lastName: z.string().min(1),
@@ -89,7 +91,7 @@ companiesRouter.post(
   '/signup',
   sensitiveActionRateLimiter,
   asyncHandler(async (req, res) => {
-    const { companyName, countryCode, currencyCode, admin } = signupSchema.parse(req.body);
+    const { companyName, countryCode, currencyCode, employeeCount, phone, admin } = signupSchema.parse(req.body);
 
     // Pas de vérification d'unicité ici, volontairement : une réponse
     // différente selon qu'un compte ou une demande existe déjà pour cet
@@ -103,6 +105,8 @@ companiesRouter.post(
         companyName,
         countryCode,
         currencyCode,
+        employeeCount,
+        phone,
         firstName: admin.firstName,
         lastName: admin.lastName,
         email: admin.email,

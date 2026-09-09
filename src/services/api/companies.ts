@@ -5,6 +5,8 @@ export interface CompanySignupPayload {
   companyName: string;
   countryCode: CountryCode;
   currencyCode: CurrencyCode;
+  employeeCount: number;
+  phone: string;
   admin: {
     firstName: string;
     lastName: string;

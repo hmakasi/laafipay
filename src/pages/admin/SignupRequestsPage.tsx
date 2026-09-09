@@ -115,8 +115,8 @@ function SignupRequestsTab() {
                     {r.firstName} {r.lastName} · {r.email}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {COUNTRY_META[r.countryCode].flag} {COUNTRY_META[r.countryCode].name} ({r.currencyCode}) · Demandée le{' '}
-                    {formatDate(r.createdAt)}
+                    {COUNTRY_META[r.countryCode].flag} {COUNTRY_META[r.countryCode].name} ({r.currencyCode}) · {r.phone} ·{' '}
+                    {r.employeeCount} salarié{r.employeeCount > 1 ? 's' : ''} · Demandée le {formatDate(r.createdAt)}
                     {r.reviewedAt && ` · traitée le ${formatDate(r.reviewedAt)} par ${r.reviewedBy}`}
                   </div>
                 </div>

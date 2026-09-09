@@ -996,14 +996,16 @@ enum SignupRequestStatus {
 }
 
 model SignupRequest {
-  id           String              @id @default(cuid())
-  companyName  String
-  countryCode  String
-  currencyCode String
-  firstName    String
-  lastName     String
-  email        String
-  status       SignupRequestStatus @default(en_attente)
+  id            String              @id @default(cuid())
+  companyName   String
+  countryCode   String
+  currencyCode  String
+  employeeCount Int?
+  phone         String?
+  firstName     String
+  lastName      String
+  email         String
+  status        SignupRequestStatus @default(en_attente)
   createdAt    DateTime            @default(now())
   reviewedAt   DateTime?
   reviewedBy   String?

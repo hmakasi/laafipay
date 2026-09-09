@@ -21,6 +21,8 @@ const validPayload = {
   companyName: 'Acme SARL',
   countryCode: 'BF',
   currencyCode: 'XOF',
+  employeeCount: 12,
+  phone: '+22670000000',
   admin: { firstName: 'Awa', lastName: 'Traore', email: 'existe-deja@b.com' },
 };
 
@@ -52,5 +54,38 @@ describe('POST /api/companies/signup — anti-énumération', () => {
 
     expect(res.status).toBe(201);
     expect(mockSignupRequestCreate).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('POST /api/companies/signup — nombre de salariés et téléphone', () => {
+  beforeEach(() => {
+    mockUserFindUnique.mockReset();
+    mockUserFindUnique.mockResolvedValue(null);
+    mockSignupRequestFindFirst.mockReset();
+    mockSignupRequestCreate.mockReset();
+    mockSignupRequestCreate.mockResolvedValue({});
+  });
+
+  it('rejette la demande sans employeeCount', async () => {
+    const { employeeCount, ...payload } = validPayload;
+    const res = await request(app).post('/api/companies/signup').send(payload);
+    expect(res.status).toBe(400);
+    expect(mockSignupRequestCreate).not.toHaveBeenCalled();
+  });
+
+  it('rejette la demande sans phone', async () => {
+    const { phone, ...payload } = validPayload;
+    const res = await request(app).post('/api/companies/signup').send(payload);
+    expect(res.status).toBe(400);
+    expect(mockSignupRequestCreate).not.toHaveBeenCalled();
+  });
+
+  it('enregistre employeeCount et phone dans la demande créée', async () => {
+    const res = await request(app).post('/api/companies/signup').send(validPayload);
+
+    expect(res.status).toBe(201);
+    expect(mockSignupRequestCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({ employeeCount: 12, phone: '+22670000000' }),
+    });
   });
 });

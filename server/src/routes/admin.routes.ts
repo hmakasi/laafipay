@@ -90,6 +90,8 @@ adminRouter.get(
         companyName: r.companyName,
         countryCode: r.countryCode,
         currencyCode: r.currencyCode,
+        employeeCount: r.employeeCount,
+        phone: r.phone,
         firstName: r.firstName,
         lastName: r.lastName,
         email: r.email,
@@ -127,6 +129,7 @@ adminRouter.post(
         name: request.companyName,
         countryCode: request.countryCode as CountryCode,
         currencyCode: request.currencyCode as CurrencyCode,
+        phone: request.phone ?? undefined,
       },
     });
     const createdUser = await prisma.user.create({
