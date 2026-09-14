@@ -108,6 +108,7 @@ enum CountryCode {
   BF
   BJ
   CD
+  SN
 }
 
 enum CurrencyCode {
