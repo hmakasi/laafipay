@@ -794,19 +794,20 @@
       "starter": {
         "name": "Starter",
         "description": "Pour les petites équipes qui démarrent.",
-        "priceByCountry": { "BF": "10 000 FCFA", "BJ": "10 000 FCFA", "CD": "$15" },
+        "priceByCountry": { "BF": "10 000 FCFA", "BJ": "10 000 FCFA", "CD": "$15", "SN": "10 000 FCFA" },
         "trial": "2 semaines gratuites",
         "features": ["Jusqu'à 10 employés", "Bulletins PDF & WhatsApp", "Gestion des départements"],
         "taxFeatureByCountry": {
           "BF": "Calcul IUTS & CNSS",
           "BJ": "Calcul IRPP & CNSS",
-          "CD": "Calcul IPR, CNSS, INPP & ONEM"
+          "CD": "Calcul IPR, CNSS, INPP & ONEM",
+          "SN": "Calcul IR & IPRES/CSS"
         }
       },
       "business": {
         "name": "Business",
         "description": "Pour les entreprises en croissance.",
-        "priceByCountry": { "BF": "35 000 FCFA", "BJ": "35 000 FCFA", "CD": "$55" },
+        "priceByCountry": { "BF": "35 000 FCFA", "BJ": "35 000 FCFA", "CD": "$55", "SN": "35 000 FCFA" },
         "features": [
           "Jusqu'à 50 employés",
           "Tout Starter +",
