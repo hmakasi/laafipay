@@ -7,7 +7,7 @@ export type FiscalDeadlineAmountSource = 'iuts' | 'cnss' | null;
 
 export interface FiscalDeadlineRule {
   id: string;
-  countryCode: 'BF' | 'BJ' | 'CD';
+  countryCode: 'BF' | 'BJ' | 'CD' | 'SN';
   label: string;
   organisme: string;
   dayOfMonth: number;
@@ -20,6 +20,8 @@ export const FISCAL_DEADLINE_RULES: FiscalDeadlineRule[] = [
   { id: 'bf_tva', countryCode: 'BF', label: 'TVA — déclaration mensuelle', organisme: 'DGI', dayOfMonth: 20, amountSource: null },
   { id: 'bj_ipts', countryCode: 'BJ', label: 'Déclaration IPTS', organisme: 'DGI Bénin', dayOfMonth: 12, amountSource: 'iuts' },
   { id: 'cd_ipr', countryCode: 'CD', label: 'Déclaration IPR', organisme: 'DGI RDC', dayOfMonth: 7, amountSource: 'iuts' },
+  { id: 'sn_ir', countryCode: 'SN', label: 'Déclaration et versement IR (retenue à la source)', organisme: 'DGID', dayOfMonth: 15, amountSource: 'iuts' },
+  { id: 'sn_ipres_css', countryCode: 'SN', label: 'Cotisations IPRES/CSS', organisme: 'IPRES/CSS', dayOfMonth: 15, amountSource: 'cnss' },
 ];
 
 // Prochaine occurrence à venir (ou aujourd'hui même) du jour du mois donné —

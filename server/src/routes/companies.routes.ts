@@ -31,7 +31,7 @@ const logoUpload = multer({
   },
 });
 
-const COUNTRY_CODES = ['BF', 'BJ', 'CD'] as const;
+const COUNTRY_CODES = ['BF', 'BJ', 'CD', 'SN'] as const;
 const CURRENCY_CODES = ['XOF', 'CDF', 'USD'] as const;
 
 // Devises acceptées par pays — garde-fou contre une paire countryCode/
@@ -41,6 +41,7 @@ const CURRENCIES_BY_COUNTRY: Record<(typeof COUNTRY_CODES)[number], readonly str
   BF: ['XOF'],
   BJ: ['XOF'],
   CD: ['CDF', 'USD'],
+  SN: ['XOF'],
 };
 
 // Payload à plat envoyée par SignupPage.tsx (src/pages/SignupPage.tsx).

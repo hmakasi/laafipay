@@ -65,7 +65,7 @@ const createAccountSchema = z.object({
   label: z.string().min(1),
   kind: z.enum(['banque', 'mobile_money']),
   provider: z.enum(['orange_money', 'wave', 'moov_money', 'mtn_money', 'm_pesa']).optional(),
-  countryCode: z.enum(['BF', 'BJ', 'CD']),
+  countryCode: z.enum(['BF', 'BJ', 'CD', 'SN']),
   currencyCode: z.enum(['XOF', 'CDF', 'USD']),
   openingBalance: z.number().default(0),
 });

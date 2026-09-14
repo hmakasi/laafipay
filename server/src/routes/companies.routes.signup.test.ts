@@ -54,3 +54,24 @@ describe('POST /api/companies/signup — anti-énumération', () => {
     expect(mockSignupRequestCreate).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('POST /api/companies/signup — pays', () => {
+  beforeEach(() => {
+    mockUserFindUnique.mockReset();
+    mockUserFindUnique.mockResolvedValue(null);
+    mockSignupRequestFindFirst.mockReset();
+    mockSignupRequestCreate.mockReset();
+    mockSignupRequestCreate.mockResolvedValue({});
+  });
+
+  it('accepte countryCode "SN" (Sénégal)', async () => {
+    const res = await request(app)
+      .post('/api/companies/signup')
+      .send({ ...validPayload, countryCode: 'SN' });
+
+    expect(res.status).toBe(201);
+    expect(mockSignupRequestCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({ countryCode: 'SN' }),
+    });
+  });
+});

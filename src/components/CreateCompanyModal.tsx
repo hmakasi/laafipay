@@ -20,7 +20,7 @@ import { Company, CountryCode, CurrencyCode } from '@/types';
 
 const createCompanySchema = z.object({
   name: z.string().min(1, 'Champ requis'),
-  countryCode: z.enum(['BF', 'BJ', 'CD']),
+  countryCode: z.enum(['BF', 'BJ', 'CD', 'SN']),
   currencyCode: z.enum(['XOF', 'CDF', 'USD']),
   taxIdNumber: z.string().min(1, 'Champ requis'),
   socialSecurityNumber: z.string().optional(),

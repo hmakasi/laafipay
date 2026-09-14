@@ -43,7 +43,7 @@ export interface CountryMeta {
   requiredEmployerFields: Array<'address' | 'taxId' | 'cnss'>;
 }
 
-export const COUNTRY_CODES: CountryCode[] = ['BF', 'BJ', 'CD'];
+export const COUNTRY_CODES: CountryCode[] = ['BF', 'BJ', 'CD', 'SN'];
 
 export const COUNTRY_META: Record<CountryCode, CountryMeta> = {
   BF: {
@@ -83,6 +83,22 @@ export const COUNTRY_META: Record<CountryCode, CountryMeta> = {
     employerNumbersOrder: ['taxId', 'cnss'],
     requiredEmployerFields: [],
   },
+  SN: {
+    code: 'SN',
+    name: 'Sénégal',
+    flag: '🇸🇳',
+    currencies: ['XOF'],
+    defaultCurrency: 'XOF',
+    taxIdLabel: "Numéro NINEA (Numéro d'Identification Nationale des Entreprises et des Associations)",
+    // Deux caisses distinctes en réalité (IPRES pour la retraite, CSS pour les
+    // prestations familiales/accidents du travail) mais un seul champ de
+    // libellé disponible dans CountryMeta — combiné plutôt que d'ajouter un
+    // second champ pour l'instant (voir décision produit 2026-09-14).
+    socialAgencyLabel: 'IPRES/CSS',
+    incomeTaxLabel: 'IR',
+    employerNumbersOrder: ['taxId', 'cnss'],
+    requiredEmployerFields: [],
+  },
 };
 
 // Devise d'AFFICHAGE des tarifs LaafiPay (landing page), distincte de
@@ -93,6 +109,7 @@ export const PRICING_CURRENCY_LABEL: Record<CountryCode, string> = {
   BF: 'FCFA',
   BJ: 'FCFA',
   CD: '$ USD',
+  SN: 'FCFA',
 };
 
 export const USER_ROLES: UserRole[] = ['admin', 'hr_manager', 'manager', 'accountant', 'employee'];

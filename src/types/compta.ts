@@ -5,7 +5,7 @@
 // émis par LaafiPay plutôt que de partager son modèle de données.
 // ============================================================
 
-export type ComptaCountryCode = 'BF' | 'BJ' | 'CD';
+export type ComptaCountryCode = 'BF' | 'BJ' | 'CD' | 'SN';
 
 // La passerelle Paie -> Compta (OD de paie, statut d'envoi/réception) est
 // maintenant branchée sur de vraies données serveur — voir

@@ -19,7 +19,7 @@ import { CountryCode } from '@/types';
 
 const signupSchema = z.object({
   companyName: z.string().min(1, 'Champ requis'),
-  countryCode: z.enum(['BF', 'BJ', 'CD']),
+  countryCode: z.enum(['BF', 'BJ', 'CD', 'SN']),
   currencyCode: z.enum(['XOF', 'CDF', 'USD']),
   firstName: z.string().min(1, 'Champ requis'),
   lastName: z.string().min(1, 'Champ requis'),
