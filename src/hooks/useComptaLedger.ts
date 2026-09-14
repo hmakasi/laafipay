@@ -1,10 +1,25 @@
-import { useQuery } from '@tanstack/react-query';
-import { getChartOfAccounts, getJournalEntries, getTrialBalance } from '@/services/api/comptaLedger';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  createJournalEntry,
+  CreateJournalEntryInput,
+  getChartOfAccounts,
+  getJournalEntries,
+  getTrialBalance,
+} from '@/services/api/comptaLedger';
+import { JournalCode } from '@/types/compta';
 
-export function useJournalEntriesQuery(journal?: 'OD' | 'AC') {
+export function useJournalEntriesQuery(journal?: JournalCode) {
   return useQuery({
     queryKey: ['compta-journal-entries', journal],
     queryFn: () => getJournalEntries(journal),
+  });
+}
+
+export function useCreateJournalEntryMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateJournalEntryInput) => createJournalEntry(input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['compta-journal-entries'] }),
   });
 }
 

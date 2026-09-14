@@ -3,6 +3,8 @@
 // sens large, encore mockés pour les autres modules). Ici tout vient du
 // backend réel (server/src/routes/compta.routes.ts).
 
+import { JournalCode } from '@/lib/comptaJournals';
+
 export type ComptaOutboxStatus = 'en_attente' | 'envoye' | 'echec';
 
 export interface ComptaBridgeJournalLine {
@@ -14,7 +16,7 @@ export interface ComptaBridgeJournalLine {
 
 export interface ComptaBridgeJournalEntry {
   id: string;
-  journal: 'OD' | 'AC';
+  journal: JournalCode;
   piece: string;
   dateEcriture: string;
   libelle: string;

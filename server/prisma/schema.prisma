@@ -179,7 +179,12 @@ enum ComptaOutboxStatus {
 
 enum ComptaJournalCode {
   OD
-  AC
+  ACH
+  CAI
+  BQ
+  MM
+  RAN
+  IMM
 }
 
 enum PaymentStatus {

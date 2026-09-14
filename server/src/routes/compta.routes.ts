@@ -1,10 +1,11 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import { randomUUID } from 'node:crypto';
 import { prisma } from '../lib/prisma.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { authorizeComptaApiKey } from '../middleware/comptaAuth.js';
 import { authenticate, authorize } from '../middleware/auth.js';
-import { NotFoundError, UnauthorizedError } from '../lib/errors.js';
+import { HttpError, NotFoundError, UnauthorizedError } from '../lib/errors.js';
 import { FISCAL_DEADLINE_RULES, nextOccurrence, severityForDueDate } from '../lib/fiscalCalendar.js';
 import { receivePayrollComptaEvent } from '../lib/comptaReceiver.js';
 import { retryPendingComptaEvents } from '../lib/comptaBridge.js';
@@ -22,8 +23,14 @@ const journalLineSchema = z.object({
   credit: z.number(),
 });
 
+// Liste des journaux gérés — voir src/lib/comptaJournals.ts côté frontend
+// (même liste, dupliquée ici comme le reste des enums pays/devise de ce
+// backend ; server/src/lib/prismaComptaJournalCode.test.ts vérifie que
+// l'enum Postgres/Prisma reste synchronisé avec cette liste).
+export const JOURNAL_CODES = ['OD', 'ACH', 'CAI', 'BQ', 'MM', 'RAN', 'IMM'] as const;
+
 const journalEntrySchema = z.object({
-  journal: z.enum(['OD', 'AC']),
+  journal: z.enum(JOURNAL_CODES),
   piece: z.string(),
   dateEcriture: z.string(),
   libelle: z.string(),
@@ -244,10 +251,10 @@ comptaRouter.get(
 );
 
 // ── Journal & Écritures ──────────────────────────────────────────
-// Liste toutes les écritures réellement enregistrées (aujourd'hui,
-// uniquement celles reçues via la passerelle paie — le hub WhatsApp
-// Accounting reste mocké et n'écrit pas encore ici). Pas de pagination :
-// volume attendu faible tant qu'un seul journal (OD) alimente la table.
+// Liste toutes les écritures réellement enregistrées — reçues via la
+// passerelle paie (OD), le hub WhatsApp Accounting une fois branché (ACH),
+// ou saisies manuellement ci-dessous (tout journal). Pas de pagination :
+// volume attendu faible.
 comptaRouter.get(
   '/journal-entries',
   authenticate,
@@ -257,7 +264,7 @@ comptaRouter.get(
     const journal = typeof req.query.journal === 'string' ? req.query.journal : undefined;
 
     const entries = await prisma.comptaJournalEntry.findMany({
-      where: { companyId, ...(journal ? { journal: journal as 'OD' | 'AC' } : {}) },
+      where: { companyId, ...(journal ? { journal: journal as (typeof JOURNAL_CODES)[number] } : {}) },
       include: { lignes: true },
       orderBy: { dateEcriture: 'desc' },
     });
@@ -274,6 +281,53 @@ comptaRouter.get(
         lignes: e.lignes.map((l) => ({ compte: l.compte, libelleCompte: l.libelleCompte, debit: l.debit, credit: l.credit })),
       }))
     );
+  })
+);
+
+// Saisie manuelle d'une écriture, dans n'importe quel journal — seule voie
+// de saisie pour CAI/BQ/MM/RAN/IMM tant qu'aucun connecteur (relevé
+// bancaire, caisse, mobile money) ne les alimente automatiquement.
+// sourceEventId doit être unique (contrainte partagée avec les écritures
+// auto-générées) ; un uuid tient lieu d'identifiant synthétique puisqu'une
+// saisie manuelle n'a pas d'eventId de passerelle.
+comptaRouter.post(
+  '/journal-entries',
+  authenticate,
+  authorize('compta:access'),
+  asyncHandler(async (req, res) => {
+    const body = journalEntrySchema.parse(req.body);
+    const companyId = req.user!.companyId;
+
+    const totalDebit = round2(body.lignes.reduce((sum, l) => sum + l.debit, 0));
+    const totalCredit = round2(body.lignes.reduce((sum, l) => sum + l.credit, 0));
+    if (totalDebit !== totalCredit) {
+      throw new HttpError(400, `Écriture non équilibrée : débit ${totalDebit} ≠ crédit ${totalCredit}`);
+    }
+
+    const entry = await prisma.comptaJournalEntry.create({
+      data: {
+        companyId,
+        journal: body.journal,
+        piece: body.piece,
+        dateEcriture: new Date(body.dateEcriture),
+        libelle: body.libelle,
+        sourceSystem: 'Manuel',
+        sourceEventId: `manual_${randomUUID()}`,
+        lignes: { create: body.lignes },
+      },
+      include: { lignes: true },
+    });
+
+    res.status(201).json({
+      id: entry.id,
+      journal: entry.journal,
+      piece: entry.piece,
+      dateEcriture: entry.dateEcriture.toISOString().slice(0, 10),
+      libelle: entry.libelle,
+      sourceSystem: entry.sourceSystem,
+      receivedAt: entry.receivedAt.toISOString(),
+      lignes: entry.lignes.map((l) => ({ compte: l.compte, libelleCompte: l.libelleCompte, debit: l.debit, credit: l.credit })),
+    });
   })
 );
 

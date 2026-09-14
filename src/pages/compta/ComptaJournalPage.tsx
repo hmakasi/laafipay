@@ -6,11 +6,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useJournalEntriesQuery } from '@/hooks/useComptaLedger';
 import { useCurrentCompanyQuery } from '@/hooks/useCompanies';
 import { formatCurrency, formatDate } from '@/lib/utils';
-
-const JOURNAL_LABEL: Record<'OD' | 'AC', string> = { OD: 'OD — Opérations diverses', AC: 'AC — Achats' };
+import { JOURNAL_CODES, JOURNAL_META, JournalCode } from '@/lib/comptaJournals';
+import { NewJournalEntryDialog } from '@/components/compta/NewJournalEntryDialog';
 
 export function ComptaJournalPage() {
-  const [journal, setJournal] = useState<'OD' | 'AC' | 'all'>('all');
+  const [journal, setJournal] = useState<JournalCode | 'all'>('all');
   const { data: entries, isLoading } = useJournalEntriesQuery(journal === 'all' ? undefined : journal);
   const { data: company } = useCurrentCompanyQuery();
   const currencyCode = company?.currencyCode;
@@ -23,20 +23,26 @@ export function ComptaJournalPage() {
           <div>
             <h1 className="text-2xl font-semibold">Journal &amp; Écritures</h1>
             <p className="text-sm text-muted-foreground">
-              Écritures comptables réellement enregistrées, alimentées automatiquement par la passerelle paie.
+              Écritures comptables réellement enregistrées — automatiquement par la passerelle paie, ou saisies manuellement.
             </p>
           </div>
         </div>
-        <Select value={journal} onValueChange={(v) => setJournal(v as typeof journal)}>
-          <SelectTrigger className="w-56">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tous les journaux</SelectItem>
-            <SelectItem value="OD">{JOURNAL_LABEL.OD}</SelectItem>
-            <SelectItem value="AC">{JOURNAL_LABEL.AC}</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          <Select value={journal} onValueChange={(v) => setJournal(v as typeof journal)}>
+            <SelectTrigger className="w-64">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous les journaux</SelectItem>
+              {JOURNAL_CODES.map((code) => (
+                <SelectItem key={code} value={code}>
+                  {code} — {JOURNAL_META[code].libelle}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <NewJournalEntryDialog />
+        </div>
       </div>
 
       {isLoading ? (
@@ -59,7 +65,7 @@ export function ComptaJournalPage() {
                       {entry.piece} — {entry.libelle}
                     </CardTitle>
                     <p className="text-xs text-muted-foreground">
-                      {JOURNAL_LABEL[entry.journal]} · {formatDate(entry.dateEcriture)}
+                      {entry.journal} — {JOURNAL_META[entry.journal].libelle} · {formatDate(entry.dateEcriture)}
                     </p>
                   </div>
                   <span className="text-sm font-semibold tabular-nums">{formatCurrency(totalDebit, currencyCode)}</span>

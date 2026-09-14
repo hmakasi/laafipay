@@ -50,8 +50,8 @@ export function buildExpenseJournalEntry(doc: WhatsAppDocument): ExpenseJournalE
 
   return {
     id: `exp_${doc.id}`,
-    journal: 'AC',
-    piece: `AC-${doc.id.toUpperCase()}`,
+    journal: 'ACH',
+    piece: `ACH-${doc.id.toUpperCase()}`,
     dateEcriture: doc.receivedAt.slice(0, 10),
     libelle: `${doc.type === 'facture_achat' ? 'Facture' : 'Ticket'} ${doc.fournisseur} — WhatsApp`,
     sourceDocumentId: doc.id,

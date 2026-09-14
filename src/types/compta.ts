@@ -5,6 +5,10 @@
 // émis par LaafiPay plutôt que de partager son modèle de données.
 // ============================================================
 
+import type { JournalCode } from '@/lib/comptaJournals';
+
+export type { JournalCode };
+
 export type ComptaCountryCode = 'BF' | 'BJ' | 'CD' | 'SN';
 
 // La passerelle Paie -> Compta (OD de paie, statut d'envoi/réception) est
@@ -57,7 +61,7 @@ export interface WhatsAppDocument {
 // `ticket_depense`, crédité au compte de règlement).
 export interface ExpenseJournalEntry {
   id: string;
-  journal: 'AC';
+  journal: 'ACH';
   piece: string;
   dateEcriture: string;
   libelle: string;
@@ -113,7 +117,7 @@ export interface LegalStatementTemplate {
 
 export interface ComptaJournalEntryDTO {
   id: string;
-  journal: 'OD' | 'AC';
+  journal: JournalCode;
   piece: string;
   dateEcriture: string;
   libelle: string;

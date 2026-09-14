@@ -12,7 +12,7 @@ export interface ComptaJournalLinePayload {
 }
 
 export interface ComptaJournalEntryPayload {
-  journal: 'OD' | 'AC';
+  journal: 'OD' | 'ACH' | 'CAI' | 'BQ' | 'MM' | 'RAN' | 'IMM';
   piece: string;
   dateEcriture: string;
   libelle: string;
