@@ -9,7 +9,7 @@ import { mockLegalStatementTemplates } from '@/mocks/compta';
 import { useFiscalDeadlinesQuery } from '@/hooks/useFiscalDeadlines';
 import type { ComptaCountryCode, DeadlineSeverity } from '@/types/compta';
 
-const COUNTRY_FLAG: Record<ComptaCountryCode, string> = { BF: '🇧🇫', BJ: '🇧🇯', CD: '🇨🇩', SN: '🇸🇳' };
+const COUNTRY_FLAG: Record<ComptaCountryCode, string> = { BF: '🇧🇫', BJ: '🇧🇯', CD: '🇨🇩', SN: '🇸🇳', CI: '🇨🇮' };
 
 const SEVERITY_VARIANT: Record<DeadlineSeverity, 'destructive' | 'warning' | 'accent'> = {
   critical: 'destructive',

@@ -9,7 +9,7 @@ import type { JournalCode } from '@/lib/comptaJournals';
 
 export type { JournalCode };
 
-export type ComptaCountryCode = 'BF' | 'BJ' | 'CD' | 'SN';
+export type ComptaCountryCode = 'BF' | 'BJ' | 'CD' | 'SN' | 'CI';
 
 // La passerelle Paie -> Compta (OD de paie, statut d'envoi/réception) est
 // maintenant branchée sur de vraies données serveur — voir

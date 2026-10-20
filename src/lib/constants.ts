@@ -43,7 +43,7 @@ export interface CountryMeta {
   requiredEmployerFields: Array<'address' | 'taxId' | 'cnss'>;
 }
 
-export const COUNTRY_CODES: CountryCode[] = ['BF', 'BJ', 'CD', 'SN'];
+export const COUNTRY_CODES: CountryCode[] = ['BF', 'BJ', 'CD', 'SN', 'CI'];
 
 export const COUNTRY_META: Record<CountryCode, CountryMeta> = {
   BF: {
@@ -99,6 +99,21 @@ export const COUNTRY_META: Record<CountryCode, CountryMeta> = {
     employerNumbersOrder: ['taxId', 'cnss'],
     requiredEmployerFields: [],
   },
+  CI: {
+    code: 'CI',
+    name: "Côte d'Ivoire",
+    flag: '🇨🇮',
+    currencies: ['XOF'],
+    defaultCurrency: 'XOF',
+    taxIdLabel: 'Numéro de Compte Contribuable (NCC)',
+    socialAgencyLabel: 'CNPS',
+    // Impôt sur Traitements et Salaires — depuis la réforme 2024 qui a
+    // fusionné l'ancien IS (impôt sur salaires) et la Contribution
+    // Nationale en une seule retenue à la source nommée ITS.
+    incomeTaxLabel: 'ITS',
+    employerNumbersOrder: ['taxId', 'cnss'],
+    requiredEmployerFields: [],
+  },
 };
 
 // Devise d'AFFICHAGE des tarifs LaafiPay (landing page), distincte de
@@ -110,6 +125,7 @@ export const PRICING_CURRENCY_LABEL: Record<CountryCode, string> = {
   BJ: 'FCFA',
   CD: '$ USD',
   SN: 'FCFA',
+  CI: 'FCFA',
 };
 
 export const USER_ROLES: UserRole[] = ['admin', 'hr_manager', 'manager', 'accountant', 'employee'];
