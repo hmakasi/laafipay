@@ -1,13 +1,16 @@
 // Calendrier des échéances fiscales/sociales récurrentes par pays — mêmes
 // obligations que celles déjà décidées pour le mock LaafiCompta (voir
-// src/mocks/compta.ts) : IUTS/IPTS/IPR (impôt sur salaires) + CNSS (BF) +
-// TVA (BF), pas d'extension à d'autres obligations BJ/CD faute de date
+// src/mocks/compta.ts) : IUTS/IPTS/IPR/ITS (impôt sur salaires) + CNSS (BF) +
+// TVA (BF), pas d'extension à d'autres obligations BJ/CD/CI faute de date
 // réglementaire vérifiée pour celles-ci.
+// CI : le jour du mois (15) pour la déclaration ITS vient de la pratique
+// courante (déclaration via e-impôts) mais n'a pas été vérifié contre un
+// texte DGI à jour — à confirmer avant tout usage en production.
 export type FiscalDeadlineAmountSource = 'iuts' | 'cnss' | null;
 
 export interface FiscalDeadlineRule {
   id: string;
-  countryCode: 'BF' | 'BJ' | 'CD' | 'SN';
+  countryCode: 'BF' | 'BJ' | 'CD' | 'SN' | 'CI';
   label: string;
   organisme: string;
   dayOfMonth: number;
@@ -22,6 +25,7 @@ export const FISCAL_DEADLINE_RULES: FiscalDeadlineRule[] = [
   { id: 'cd_ipr', countryCode: 'CD', label: 'Déclaration IPR', organisme: 'DGI RDC', dayOfMonth: 7, amountSource: 'iuts' },
   { id: 'sn_ir', countryCode: 'SN', label: 'Déclaration et versement IR (retenue à la source)', organisme: 'DGID', dayOfMonth: 15, amountSource: 'iuts' },
   { id: 'sn_ipres_css', countryCode: 'SN', label: 'Cotisations IPRES/CSS', organisme: 'IPRES/CSS', dayOfMonth: 15, amountSource: 'cnss' },
+  { id: 'ci_its', countryCode: 'CI', label: 'Déclaration et paiement ITS', organisme: 'DGI', dayOfMonth: 15, amountSource: 'iuts' },
 ];
 
 // Prochaine occurrence à venir (ou aujourd'hui même) du jour du mois donné —

@@ -119,9 +119,9 @@ export interface AuthState {
 // Company / Organisation
 // ============================================================
 
-// Pays supportés par le moteur de paie multi-pays (BF/BJ/CD/SN pour l'instant —
+// Pays supportés par le moteur de paie multi-pays (BF/BJ/CD/SN/CI pour l'instant —
 // voir server/src/payroll/strategy-factory.ts côté backend).
-export type CountryCode = 'BF' | 'BJ' | 'CD' | 'SN';
+export type CountryCode = 'BF' | 'BJ' | 'CD' | 'SN' | 'CI';
 export type CurrencyCode = 'XOF' | 'CDF' | 'USD';
 
 export interface Company {

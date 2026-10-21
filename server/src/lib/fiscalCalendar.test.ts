@@ -12,3 +12,10 @@ describe('FISCAL_DEADLINE_RULES — Sénégal', () => {
     expect(rule).toMatchObject({ countryCode: 'SN', amountSource: 'cnss' });
   });
 });
+
+describe("FISCAL_DEADLINE_RULES — Côte d'Ivoire", () => {
+  it('inclut une règle de déclaration ITS', () => {
+    const rule = FISCAL_DEADLINE_RULES.find((r) => r.id === 'ci_its');
+    expect(rule).toMatchObject({ countryCode: 'CI', amountSource: 'iuts' });
+  });
+});

@@ -1,14 +1,17 @@
 const GRAPH_API_VERSION = 'v21.0';
 const REQUEST_TIMEOUT_MS = 10_000;
 
-// Indicatifs pays pour les 3 marchés couverts par LaafiPay — nécessaires
+// Indicatifs pays pour les marchés couverts par LaafiPay — nécessaires
 // car Employee.phone est parfois saisi en local (8 chiffres, ex.
 // "70123456") et l'API Cloud attend un numéro complet (indicatif inclus,
 // sans "+", format E.164 sans le signe).
+// Remarque : SN n'a pas d'entrée ici (gap pré-existant, hors périmètre de
+// l'ajout CI).
 const CALLING_CODE_BY_COUNTRY: Record<string, string> = {
   BF: '226',
   BJ: '229',
   CD: '243',
+  CI: '225',
 };
 
 export function normalizeWhatsAppNumber(rawPhone: string, countryCode: string): string {
