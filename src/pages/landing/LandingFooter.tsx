@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 export function LandingFooter() {
@@ -32,14 +33,14 @@ export function LandingFooter() {
             <h3 className="text-sm font-semibold text-foreground">{t('landing.footer.legal')}</h3>
             <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
               <li>
-                <a href="#" className="hover:text-foreground">
+                <Link to="/mentions-legales" className="hover:text-foreground">
                   {t('landing.footer.legalNotice')}
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="hover:text-foreground">
+                <Link to="/cgu" className="hover:text-foreground">
                   {t('landing.footer.terms')}
-                </a>
+                </Link>
               </li>
             </ul>
           </div>

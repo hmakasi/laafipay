@@ -26,7 +26,7 @@ export function PricingSection() {
           {PLANS.map((plan) => {
             const isHighlighted = plan === HIGHLIGHTED_PLAN;
             // Enterprise reste "Sur devis" quel que soit le pays ; starter/business
-            // ont un prix par pays (FCFA pour BF/BJ, USD pour la RDC).
+            // ont un prix par pays (FCFA pour BF/BJ/SN/CI, USD pour la RDC).
             const price =
               plan === 'enterprise'
                 ? t('landing.pricing.enterprise.price')

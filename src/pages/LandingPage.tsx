@@ -1,5 +1,6 @@
 import { LandingHeader } from '@/pages/landing/LandingHeader';
 import { HeroSection } from '@/pages/landing/HeroSection';
+import { TrustedBySection } from '@/pages/landing/TrustedBySection';
 import { FeaturesSection } from '@/pages/landing/FeaturesSection';
 import { HowItWorksSection } from '@/pages/landing/HowItWorksSection';
 import { PricingSection } from '@/pages/landing/PricingSection';
@@ -13,6 +14,7 @@ export function LandingPage() {
       <LandingHeader />
       <main>
         <HeroSection />
+        <TrustedBySection />
         <FeaturesSection />
         <HowItWorksSection />
         <PricingSection />
