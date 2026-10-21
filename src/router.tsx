@@ -40,6 +40,8 @@ import { ComptaJournalPage } from '@/pages/compta/ComptaJournalPage';
 import { ComptaRapportsPage } from '@/pages/compta/ComptaRapportsPage';
 import { ComptaParametresPage } from '@/pages/compta/ComptaParametresPage';
 import { SignupRequestsPage } from '@/pages/admin/SignupRequestsPage';
+import { LegalNoticePage } from '@/pages/legal/LegalNoticePage';
+import { TermsPage } from '@/pages/legal/TermsPage';
 
 function NotFoundRedirect() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -56,6 +58,8 @@ export function AppRouter() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
         <Route path="/onboard/:token" element={<OnboardingPage />} />
+        <Route path="/mentions-legales" element={<LegalNoticePage />} />
+        <Route path="/cgu" element={<TermsPage />} />
 
         <Route element={<ProtectedRoute />}>
           <Route element={<AppLayout />}>
