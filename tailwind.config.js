@@ -119,6 +119,13 @@ export default {
           from: { opacity: '0', transform: 'scale(0.97)' },
           to: { opacity: '1', transform: 'scale(1)' },
         },
+        // Boucle infinie : translate de 0 à -50% — le contenu du conteneur
+        // doit être dupliqué une fois (deux copies) pour que la boucle soit
+        // invisible au raccord. Utilisé par la bande "Ils nous font confiance".
+        marquee: {
+          from: { transform: 'translateX(0)' },
+          to: { transform: 'translateX(-50%)' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
@@ -126,6 +133,7 @@ export default {
         'fade-in': 'fade-in 0.3s ease-out',
         'slide-in': 'slide-in 0.3s ease-out',
         'fade-scale-in': 'fade-scale-in 0.5s ease-out',
+        marquee: 'marquee 22s linear infinite',
       },
     },
   },
