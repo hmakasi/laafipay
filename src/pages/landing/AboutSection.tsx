@@ -1,7 +1,8 @@
 import { Trans, useTranslation } from 'react-i18next';
 import { CheckCircle2, Quote, ShieldCheck, User, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import founderPortrait from '@/assets/landing/founder-portrait.jpg';
 
 // Carte en classes Tailwind littérales (pas les tokens bg-card/border de
 // l'app interne) : langage visuel déjà en place sur la landing page
@@ -48,13 +49,15 @@ export function AboutSection() {
             </div>
 
             {/* Carte 2 — Le mot de la fondatrice.
-               Ni nom ni photo fournis dans le contenu à intégrer : silhouette
-               générique (avec libellé accessible) plutôt qu'un nom inventé sur
-               une page publique réelle. Remplacer AvatarFallback par
-               <AvatarImage src="..." alt="Prénom Nom" /> une fois la photo prête. */}
+               Photo réelle fournie (src/assets/landing/founder-portrait.jpg) ;
+               AvatarFallback reste en place comme filet de sécurité Radix
+               standard (affiché si l'image ne charge pas), pas pour un nom
+               inventé. Pas de nom complet reçu à ce jour : alt text basé sur
+               le rôle plutôt qu'un nom fabriqué. */}
             <div className={CARD}>
               <div className="flex items-center gap-4">
-                <Avatar className="h-14 w-14 border-2 border-emerald-500 bg-emerald-100">
+                <Avatar className="h-20 w-20 border-2 border-emerald-500 bg-emerald-100">
+                  <AvatarImage src={founderPortrait} alt={t('landing.about.founder.role')} className="object-cover" />
                   <AvatarFallback
                     className="bg-emerald-100 text-emerald-700"
                     aria-label={t('landing.about.founder.role')}
